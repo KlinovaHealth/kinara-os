@@ -15,25 +15,38 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         service:
           - analytics-service
+          - appointment-service
+          - audit-service
           - cargo-maritime-service
           - cargo-service
           - clinical-service
           - compliance-service
           - cooperative-service
+          - crew-service
           - customs-service
           - dock-service
           - documentation-service
           - driver-service
+          - farmer-finance-service
           - farmer-service
           - fleet-service
           - governance-service
+          - health-analytics-service
+          - health-compliance-service
+          - immunization-service
+          - input-service
+          - irrigation-service
+          - lab-service
           - last-mile-service
+          - livestock-service
           - logistics-analytics-service
           - market-service
           - notification-service
+          - outbreak-service
           - patient-service
           - payment-service
           - pharmacy-service
@@ -43,9 +56,13 @@ jobs:
           - shipment-service
           - shipping-service
           - sms-gateway
+          - supply-chain-service
+          - telemedicine-service
           - trade-finance-service
           - transport-service
           - vessel-service
+          - voyage-service
+          - wallet-service
           - warehouse-service
           - weather-service
     steps:
@@ -53,9 +70,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
       - name: Test ${{ matrix.service }}
         run: |
           cd services/${{ matrix.service }}
+          go mod tidy
           go test ./... -v -timeout 60s -race
         continue-on-error: false
 
