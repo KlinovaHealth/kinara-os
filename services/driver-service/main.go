@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -75,15 +76,15 @@ func main() {
 	}).Methods(http.MethodGet)
 
 	api := r.PathPrefix("/api/v1").Subrouter()
-	api.Use(middleware.Logging)
+	api.Use(middleware.Logging(slog.Default()))
 	api.Use(middleware.RateLimit(rdb, 300))
 	api.Use(middleware.JWT(jwtValidator))
 	driverHandler.RegisterRoutes(api)
 
 	tlsCfg, err := auth.BuildServerTLSConfig(auth.MTLSConfig{
-		CertFile: tlsCert,
-		KeyFile:  tlsKey,
-		CAFile:   tlsCA,
+		CertPath: tlsCert,
+		KeyPath:  tlsKey,
+		CACertPath:   tlsCA,
 	})
 	if err != nil {
 		log.Fatalf("tls config: %v", err)

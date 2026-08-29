@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -33,7 +34,7 @@ func main() {
 	queries := db.New(pool)
 	h := handlers.NewHandler(queries)
 	r := mux.NewRouter()
-	r.Use(middleware.Logging)
+	r.Use(middleware.Logging(slog.Default()))
 	r.Use(middleware.RateLimit(os.Getenv("REDIS_URL"), "analytics-service", 300, time.Minute))
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(middleware.JWTAuth(jwtValidator))

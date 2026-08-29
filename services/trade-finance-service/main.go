@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -23,9 +24,9 @@ func main() {
 	if err != nil { log.Fatalf("jwt: %v", err) }
 
 	tlsCfg, err := auth.BuildServerTLSConfig(auth.MTLSConfig{
-		CertFile: os.Getenv("TLS_CERT_FILE"),
-		KeyFile:  os.Getenv("TLS_KEY_FILE"),
-		CAFile:   os.Getenv("TLS_CA_FILE"),
+		CertPath: os.Getenv("TLS_CERT_FILE"),
+		KeyPath:  os.Getenv("TLS_KEY_FILE"),
+		CACertPath:   os.Getenv("TLS_CA_FILE"),
 	})
 	if err != nil { log.Fatalf("tls: %v", err) }
 
@@ -33,7 +34,7 @@ func main() {
 	h := handlers.NewHandler(queries)
 
 	r := mux.NewRouter()
-	r.Use(middleware.Logging)
+	r.Use(middleware.Logging(slog.Default()))
 	r.Use(middleware.RateLimit(os.Getenv("REDIS_URL"), "trade-finance-service", 200))
 	r.Use(middleware.Auth(jwtValidator))
 
