@@ -1,0 +1,38 @@
+# Compiled binaries
+services/patient-service/patient-service
+services/clinical-service/clinical-service
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.html
+
+# Build cache
+vendor/
+*/vendor/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+!*.key.example
+certs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go workspace
+go.work
+go.work.sum
