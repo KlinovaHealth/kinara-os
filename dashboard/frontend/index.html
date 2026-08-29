@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kinara OS — Tableau de bord Ministère de la Santé (Togo)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    header { background: #1a2035; padding: 16px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #2d3748; }
+    header img { width: 40px; height: 40px; border-radius: 8px; background: #00b890; display: flex; align-items: center; justify-content: center; }
+    header h1 { font-size: 1.25rem; font-weight: 700; color: #00d4a0; }
+    header span { font-size: 0.875rem; color: #718096; margin-left: auto; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .kpi-card { background: #1a2035; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
+    .kpi-card .label { font-size: 0.75rem; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .kpi-card .value { font-size: 2rem; font-weight: 700; color: #00d4a0; }
+    .kpi-card .sub { font-size: 0.75rem; color: #a0aec0; margin-top: 4px; }
+    .kpi-card.alert .value { color: #fc8181; }
+    .kpi-card.warn .value { color: #f6ad55; }
+    .section { background: #1a2035; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    .section h2 { font-size: 1rem; font-weight: 600; color: #e2e8f0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section h2 .badge { background: #fc8181; color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 99px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th { text-align: left; padding: 10px 12px; color: #718096; font-weight: 500; border-bottom: 1px solid #2d3748; font-size: 0.75rem; text-transform: uppercase; }
+    td { padding: 10px 12px; border-bottom: 1px solid #1e2a3a; }
+    tr:last-child td { border-bottom: none; }
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; }
+    .pill.active { background: #fc818133; color: #fc8181; }
+    .pill.monitoring { background: #f6ad5533; color: #f6ad55; }
+    .pill.resolved { background: #68d39133; color: #68d391; }
+    .pill.mild { background: #68d39133; color: #68d391; }
+    .pill.moderate { background: #f6ad5533; color: #f6ad55; }
+    .pill.severe { background: #fc818133; color: #fc8181; }
+    .pill.critical { background: #e53e3e33; color: #e53e3e; }
+    .bar { height: 6px; border-radius: 3px; background: #2d3748; overflow: hidden; margin-top: 4px; }
+    .bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #00b890, #00d4a0); }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .loading { color: #718096; text-align: center; padding: 32px; }
+    #country-select { background: #2d3748; color: #e2e8f0; border: 1px solid #4a5568; border-radius: 6px; padding: 6px 12px; font-size: 0.875rem; margin-left: 8px; }
+    .refresh-btn { background: #00b890; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; margin-left: 8px; }
+    .refresh-btn:hover { background: #00d4a0; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="width:40px;height:40px;border-radius:8px;background:#00b890;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#fff;">K</div>
+    <h1>Kinara OS — Tableau de Bord Santé</h1>
+    <span id="last-updated">Chargement...</span>
+    <select id="country-select" onchange="loadDashboard()">
+      <option value="TG">🇹🇬 Togo</option>
+      <option value="GH">🇬🇭 Ghana</option>
+      <option value="KE">🇰🇪 Kenya</option>
+      <option value="ET">🇪🇹 Éthiopie</option>
+    </select>
+    <button class="refresh-btn" onclick="loadDashboard()">↻ Actualiser</button>
+  </header>
+
+  <div class="container">
+    <div id="kpi-grid" class="kpi-grid">
+      <div class="loading">Chargement des indicateurs...</div>
+    </div>
+
+    <div class="two-col">
+      <div class="section">
+        <h2>🚨 Alertes Épidémiques <span class="badge" id="outbreak-count">0</span></h2>
+        <table>
+          <thead><tr><th>Maladie</th><th>Région</th><th>Cas</th><th>Statut</th></tr></thead>
+          <tbody id="outbreaks-body"><tr><td colspan="4" style="color:#718096;text-align:center">Aucune alerte active</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>📊 Maladies Signalées (Top 10)</h2>
+        <table>
+          <thead><tr><th>Maladie</th><th>ICD-10</th><th>Cas</th><th>Sévérité</th></tr></thead>
+          <tbody id="diseases-body"><tr><td colspan="4" style="color:#718096;text-align:center">Aucune donnée</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🏥 Indicateurs d'Impact (Gates Foundation)</h2>
+      <div id="impact-grid" class="kpi-grid" style="margin-bottom:0">
+        <div class="loading">Chargement...</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🔐 Conformité & Chiffrement</h2>
+      <table>
+        <thead><tr><th>Service</th><th>Champs Chiffrés</th><th>Algorithme</th><th>Statut</th></tr></thead>
+        <tbody id="compliance-body"><tr><td colspan="4" style="color:#718096;text-align:center">Chargement...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:8116'
+      : '/api';
+
+    async function loadDashboard() {
+      const country = document.getElementById('country-select').value;
+      document.getElementById('last-updated').textContent = 'Actualisation...';
+
+      try {
+        const res = await fetch(`${API}/api/dashboard/${country}`);
+        const body = await res.json();
+        const { summary, diseases, outbreaks } = body.data;
+
+        renderKPIs(summary);
+        renderImpact(summary.impact);
+        renderOutbreaks(outbreaks);
+        renderDiseases(diseases);
+
+        // Load compliance separately
+        const compRes = await fetch(`${API}/graphql`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: '{ complianceStatus { service encrypted_fields total_fields algorithm is_compliant } }' })
+        });
+        const compData = await compRes.json();
+        renderCompliance(compData.data?.complianceStatus || []);
+
+        document.getElementById('last-updated').textContent = 'Mis à jour: ' + new Date().toLocaleTimeString('fr-FR');
+      } catch (err) {
+        console.error(err);
+        document.getElementById('last-updated').textContent = 'Erreur de connexion';
+      }
+    }
+
+    function renderKPIs(summary) {
+      const impact = summary.impact || {};
+      const grid = document.getElementById('kpi-grid');
+      const outbreakCount = summary.active_outbreaks || 0;
+      grid.innerHTML = `
+        <div class="kpi-card">
+          <div class="label">Patients Totaux</div>
+          <div class="value">${(impact.total_patients || 0).toLocaleString('fr-FR')}</div>
+          <div class="sub">Enregistrés dans le système</div>
+        </div>
+        <div class="kpi-card ${outbreakCount > 0 ? 'alert' : ''}">
+          <div class="label">Alertes Épidémiques</div>
+          <div class="value">${outbreakCount}</div>
+          <div class="sub">${outbreakCount > 0 ? '⚠ Intervention requise' : '✓ Aucune alerte active'}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Taux d'Amélioration</div>
+          <div class="value">${(impact.outcome_improvement_rate || 0).toFixed(1)}%</div>
+          <div class="bar"><div class="bar-fill" style="width:${impact.outcome_improvement_rate || 0}%"></div></div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Coût par Visite</div>
+          <div class="value">$${(impact.avg_cost_per_visit_usd || 0).toFixed(2)}</div>
+          <div class="sub">USD moyen par consultation</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Cliniques Actives</div>
+          <div class="value">${impact.total_clinics || 0}</div>
+          <div class="sub">Dans le réseau Kinara</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Conformité</div>
+          <div class="value">${(summary.compliance_score || 100).toFixed(0)}%</div>
+          <div class="sub">HIPAA / chiffrement AES-256-GCM</div>
+        </div>
+      `;
+    }
+
+    function renderImpact(impact) {
+      if (!impact) return;
+      document.getElementById('impact-grid').innerHTML = `
+        <div class="kpi-card"><div class="label">Impact Santé</div><div class="value">${(impact.outcome_improvement_rate||0).toFixed(1)}%</div><div class="sub">Patients avec amélioration clinique</div></div>
+        <div class="kpi-card"><div class="label">Réduction Coût</div><div class="value">-${(impact.cost_reduction_pct||35).toFixed(0)}%</div><div class="sub">vs. coût moyen régional</div></div>
+        <div class="kpi-card"><div class="label">Pays</div><div class="value">${impact.country}</div><div class="sub">Pilote Togo 2026</div></div>
+        <div class="kpi-card"><div class="label">Généré</div><div class="value" style="font-size:1rem">${new Date(impact.generated_at).toLocaleString('fr-FR')}</div><div class="sub">Données temps réel</div></div>
+      `;
+    }
+
+    function renderOutbreaks(outbreaks) {
+      const tbody = document.getElementById('outbreaks-body');
+      const badge = document.getElementById('outbreak-count');
+      badge.textContent = outbreaks.length;
+      if (!outbreaks.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:#68d391;text-align:center">✓ Aucune alerte épidémique active</td></tr>';
+        return;
+      }
+      tbody.innerHTML = outbreaks.map(a => `
+        <tr>
+          <td><strong>${a.disease_name}</strong></td>
+          <td>${a.region || a.country}</td>
+          <td>${a.case_count}</td>
+          <td><span class="pill ${a.status}">${a.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDiseases(diseases) {
+      const tbody = document.getElementById('diseases-body');
+      if (!diseases.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:#718096;text-align:center">Aucune maladie signalée</td></tr>';
+        return;
+      }
+      tbody.innerHTML = diseases.slice(0, 10).map(d => `
+        <tr>
+          <td>${d.disease_name}</td>
+          <td><code style="color:#a0aec0;font-size:0.75rem">${d.icd10_code}</code></td>
+          <td>${d.case_count}</td>
+          <td><span class="pill ${d.severity}">${d.severity}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCompliance(statuses) {
+      const tbody = document.getElementById('compliance-body');
+      if (!statuses.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:#718096;text-align:center">Aucune donnée de conformité</td></tr>';
+        return;
+      }
+      tbody.innerHTML = statuses.map(s => `
+        <tr>
+          <td>${s.service}</td>
+          <td>${s.encrypted_fields}/${s.total_fields} champs</td>
+          <td><code style="color:#00d4a0;font-size:0.75rem">${s.algorithm}</code></td>
+          <td><span class="pill ${s.is_compliant ? 'resolved' : 'alert'}">${s.is_compliant ? '✓ Conforme' : '✗ Non-conforme'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Load on page open
+    loadDashboard();
+    // Auto-refresh every 30 seconds
+    setInterval(loadDashboard, 30000);
+  </script>
+</body>
+</html>
