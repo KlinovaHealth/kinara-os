@@ -28,6 +28,10 @@ type Handler struct {
 	weatherURL     string
 	analyticsURL   string
 	farmerURL      string
+	patientURL     string
+	clinicalURL    string
+	appointmentURL string
+	labURL         string
 	twilioSID      string
 	twilioToken    string
 	atAPIKey       string
@@ -36,15 +40,19 @@ type Handler struct {
 
 func NewHandler(store Store) *Handler {
 	return &Handler{
-		store:        store,
-		marketURL:    env("MARKET_SERVICE_URL", "http://market-service:8086"),
-		weatherURL:   env("WEATHER_SERVICE_URL", "http://weather-service:8088"),
-		analyticsURL: env("ANALYTICS_SERVICE_URL", "http://analytics-service:8108"),
-		farmerURL:    env("FARMER_SERVICE_URL", "http://farmer-service:8084"),
-		twilioSID:    os.Getenv("TWILIO_ACCOUNT_SID"),
-		twilioToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
-		atAPIKey:     os.Getenv("AFRICASTALKING_API_KEY"),
-		atUsername:   os.Getenv("AFRICASTALKING_USERNAME"),
+		store:          store,
+		marketURL:      env("MARKET_SERVICE_URL", "http://market-service:8086"),
+		weatherURL:     env("WEATHER_SERVICE_URL", "http://weather-service:8088"),
+		analyticsURL:   env("ANALYTICS_SERVICE_URL", "http://analytics-service:8108"),
+		farmerURL:      env("FARMER_SERVICE_URL", "http://farmer-service:8084"),
+		patientURL:     env("PATIENT_SERVICE_URL", "http://patient-service:8081"),
+		clinicalURL:    env("CLINICAL_SERVICE_URL", "http://clinical-service:8082"),
+		appointmentURL: env("APPOINTMENT_SERVICE_URL", "http://appointment-service:8120"),
+		labURL:         env("LAB_SERVICE_URL", "http://lab-service:8122"),
+		twilioSID:      os.Getenv("TWILIO_ACCOUNT_SID"),
+		twilioToken:    os.Getenv("TWILIO_AUTH_TOKEN"),
+		atAPIKey:       os.Getenv("AFRICASTALKING_API_KEY"),
+		atUsername:     os.Getenv("AFRICASTALKING_USERNAME"),
 	}
 }
 
@@ -155,6 +163,14 @@ func (h *Handler) processCommand(ctx context.Context, from, text, country string
 		return h.handleBalance(ctx, from)
 	case models.CmdRegister:
 		return h.handleRegister(ctx, cmd, from)
+	case models.CmdPatient:
+		return h.handlePatient(ctx, cmd, from)
+	case models.CmdSymptom:
+		return h.handleSymptom(ctx, cmd, from)
+	case models.CmdAppt:
+		return h.handleAppt(ctx, cmd, from)
+	case models.CmdLab:
+		return h.handleLab(ctx, cmd, from)
 	case models.CmdHelp:
 		return helpText()
 	default:
@@ -417,16 +433,151 @@ func parseCommand(text string) models.ParsedCommand {
 		"REVENU":   models.CmdIncome,
 		"BALANCE":  models.CmdBalance,
 		"SOLDE":    models.CmdBalance,
-		"REGISTER": models.CmdRegister,
-		"INSCRIRE": models.CmdRegister,
-		"HELP":     models.CmdHelp,
-		"AIDE":     models.CmdHelp,
-		"?":        models.CmdHelp,
+		"REGISTER":  models.CmdRegister,
+		"INSCRIRE":  models.CmdRegister,
+		"PATIENT":   models.CmdPatient,
+		"MALADE":    models.CmdPatient,
+		"SYMPTOM":   models.CmdSymptom,
+		"SYMPTOME":  models.CmdSymptom,
+		"APPT":      models.CmdAppt,
+		"RDV":       models.CmdAppt,
+		"LAB":       models.CmdLab,
+		"LABO":      models.CmdLab,
+		"HELP":      models.CmdHelp,
+		"AIDE":      models.CmdHelp,
+		"?":         models.CmdHelp,
 	}
 	if t, ok := cmdMap[keyword]; ok {
 		return models.ParsedCommand{Type: t, Args: args, RawText: text}
 	}
 	return models.ParsedCommand{Type: models.CmdUnknown, Args: parts, RawText: text}
+}
+
+// handlePatient: "PATIENT John 35M" → create patient record
+// Format: PATIENT <name> <age><M|F> [clinic_id]
+func (h *Handler) handlePatient(ctx context.Context, cmd models.ParsedCommand, from string) string {
+	if len(cmd.Args) < 2 {
+		return "KINARA SANTE:\nPATIENT <nom> <age><M|F>\nEx: PATIENT Kofi 35M"
+	}
+	name := cmd.Args[0]
+	ageGender := cmd.Args[1]
+	gender := "M"
+	ageStr := ageGender
+	if len(ageGender) > 0 {
+		last := strings.ToUpper(string(ageGender[len(ageGender)-1]))
+		if last == "M" || last == "F" {
+			gender = last
+			ageStr = ageGender[:len(ageGender)-1]
+		}
+	}
+	age := 0
+	for _, c := range ageStr {
+		if unicode.IsDigit(c) {
+			age = age*10 + int(c-'0')
+		}
+	}
+	if age <= 0 || age > 150 {
+		return "KINARA: Age invalide.\nEx: PATIENT Kofi 35M"
+	}
+
+	body := fmt.Sprintf(`{"first_name":%q,"last_name":"","date_of_birth":"2006-01-02","gender":%q,"phone":%q,"country":"TG","tenant_id":"TG","sms_registered":true,"sms_age":%d}`,
+		name, strings.ToLower(gender), from, age)
+	resp, err := httpPost(ctx, h.patientURL+"/api/v1/patients/sms", body)
+	if err != nil {
+		return "KINARA: Enregistrement échoué. Réessayez."
+	}
+	var result struct {
+		Success bool `json:"success"`
+		Data    struct {
+			PatientRef string `json:"patient_ref"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(resp, &result); err != nil || !result.Success {
+		return "KINARA: Patient enregistré (hors ligne). Venez au centre de santé."
+	}
+	return fmt.Sprintf("KINARA SANTÉ: ✓\nPatient: %s\nID: %s\nMontrez ce code au dispensaire.", name, result.Data.PatientRef)
+}
+
+// handleSymptom: "SYMPTOM fever chills headache" → add to active SOAP note
+func (h *Handler) handleSymptom(ctx context.Context, cmd models.ParsedCommand, from string) string {
+	if len(cmd.Args) == 0 {
+		return "KINARA SANTÉ:\nSYMPTOM <symptômes>\nEx: SYMPTOM fièvre frissons"
+	}
+	symptoms := strings.Join(cmd.Args, ", ")
+	body := fmt.Sprintf(`{"phone":%q,"subjective":%q,"source":"sms"}`, from, symptoms)
+	resp, err := httpPost(ctx, h.clinicalURL+"/api/v1/soap/sms", body)
+	if err != nil {
+		return "KINARA: Symptômes notés. Consultez le médecin."
+	}
+	var result struct {
+		Success bool `json:"success"`
+		Data    struct {
+			NoteRef string `json:"note_ref"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(resp, &result); err != nil || !result.Success {
+		return fmt.Sprintf("KINARA SANTÉ: ✓\nSymptômes notés: %s\nConsultez le médecin dès que possible.", symptoms)
+	}
+	return fmt.Sprintf("KINARA SANTÉ: ✓\nSymptômes enregistrés: %s\nNote: %s\nConsultez le médecin.", symptoms, result.Data.NoteRef)
+}
+
+// handleAppt: "APPT <date> <clinic>" → schedule appointment
+// Format: APPT 2026-10-15 LOME-NORD
+func (h *Handler) handleAppt(ctx context.Context, cmd models.ParsedCommand, from string) string {
+	if len(cmd.Args) < 2 {
+		return "KINARA RDV:\nAPPT <date> <centre>\nEx: APPT 2026-10-15 LOME-NORD\nOu RDV DEMAIN TSEVIE"
+	}
+	dateStr := cmd.Args[0]
+	clinic := strings.Join(cmd.Args[1:], " ")
+
+	// Accept DEMAIN/TOMORROW
+	if strings.ToUpper(dateStr) == "DEMAIN" || strings.ToUpper(dateStr) == "TOMORROW" {
+		dateStr = time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
+	}
+
+	body := fmt.Sprintf(`{"phone":%q,"scheduled_date":%q,"clinic_name":%q,"source":"sms","duration_min":30}`,
+		from, dateStr, clinic)
+	resp, err := httpPost(ctx, h.appointmentURL+"/api/v1/appointments/sms", body)
+	if err != nil {
+		return fmt.Sprintf("KINARA RDV: Demande reçue\n%s à %s\nPrésentez-vous à 8h00.", dateStr, clinic)
+	}
+	var result struct {
+		Success bool `json:"success"`
+		Data    struct {
+			AppointmentRef string `json:"appointment_ref"`
+			ScheduledAt    string `json:"scheduled_at"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(resp, &result); err != nil || !result.Success {
+		return fmt.Sprintf("KINARA RDV: ✓\n%s\n%s\nPrésentez-vous 15 min avant.", clinic, dateStr)
+	}
+	return fmt.Sprintf("KINARA RDV: ✓\nRef: %s\n%s\nPrésentez-vous 15 min avant.", result.Data.AppointmentRef, dateStr)
+}
+
+// handleLab: "LAB <patient_ref> <test>" → order lab test via SMS
+func (h *Handler) handleLab(ctx context.Context, cmd models.ParsedCommand, from string) string {
+	if len(cmd.Args) < 2 {
+		return "KINARA LABO:\nLAB <ID-patient> <test>\nEx: LAB PAT-A1B2C3D4 MALARIA\nTests: MALARIA HIV GLUCOSE HEMO"
+	}
+	patientRef := cmd.Args[0]
+	testName := strings.Join(cmd.Args[1:], " ")
+
+	body := fmt.Sprintf(`{"patient_ref":%q,"test_name":%q,"ordered_by_phone":%q,"priority":"routine","source":"sms"}`,
+		patientRef, testName, from)
+	resp, err := httpPost(ctx, h.labURL+"/api/v1/lab/orders/sms", body)
+	if err != nil {
+		return fmt.Sprintf("KINARA LABO: Test %s demandé pour %s\nCollecte au laboratoire.", testName, patientRef)
+	}
+	var result struct {
+		Success bool `json:"success"`
+		Data    struct {
+			OrderRef string `json:"order_ref"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(resp, &result); err != nil || !result.Success {
+		return fmt.Sprintf("KINARA LABO: ✓\nTest: %s\nPatient: %s\nAllez au labo maintenant.", testName, patientRef)
+	}
+	return fmt.Sprintf("KINARA LABO: ✓\nOrdre: %s\nTest: %s\nPatient: %s\nRésultats en 24h.", result.Data.OrderRef, testName, patientRef)
 }
 
 func helpText() string {
@@ -439,9 +590,15 @@ STATUS - Your listings
 INCOME - Earnings report
 BALANCE - Wallet balance
 REGISTER <name> <crop> - Sign up
+
+CLINIC / SANTÉ:
+PATIENT <name> <age><M|F> - Register patient
+SYMPTOM <symptoms...> - Log symptoms
+APPT <date> <clinic> - Book appointment
+LAB <patient_id> <test> - Order lab test
 HELP - This menu
 
-EN FRANÇAIS: PRIX METEO VENDRE AIDE`
+EN FRANÇAIS: PRIX METEO VENDRE AIDE RDV MALADE SYMPTOME LABO`
 }
 
 func (c models.CommandType) String() string { return string(c) }

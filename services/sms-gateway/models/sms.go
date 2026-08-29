@@ -25,6 +25,10 @@ const (
 	CmdHelp     CommandType = "HELP"
 	CmdRegister CommandType = "REGISTER"
 	CmdBalance  CommandType = "BALANCE"
+	CmdPatient  CommandType = "PATIENT"
+	CmdSymptom  CommandType = "SYMPTOM"
+	CmdAppt     CommandType = "APPT"
+	CmdLab      CommandType = "LAB"
 	CmdUnknown  CommandType = "UNKNOWN"
 )
 

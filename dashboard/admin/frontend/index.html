@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinara OS — Admin Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+    --green: #00d4aa; --red: #ff4757; --yellow: #ffa502;
+    --blue: #1e90ff; --text: #e8eaf6; --muted: #7c8099;
+    --pillar-health: #00d4aa; --pillar-agri: #7bed9f;
+    --pillar-logistics: #1e90ff; --pillar-maritime: #a29bfe;
+    --pillar-governance: #ffa502;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .logo { font-size: 18px; font-weight: 700; color: var(--green); letter-spacing: -0.5px; }
+  .logo span { color: var(--text); font-weight: 400; font-size: 13px; margin-left: 8px; opacity: 0.6; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .ws-badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: #1a3a2a; color: var(--green); }
+  .ws-badge.disconnected { background: #3a1a1a; color: var(--red); }
+  .role-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: var(--border); }
+  button { cursor: pointer; border: none; border-radius: 6px; font-size: 13px; padding: 6px 14px; }
+  .btn-primary { background: var(--green); color: #000; font-weight: 600; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+
+  nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 4px; padding: 0 24px; }
+  .tab { padding: 12px 16px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px; color: var(--muted);
+    transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
+  .tab.active { color: var(--text); border-color: var(--green); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .green { color: var(--green); } .red { color: var(--red); } .yellow { color: var(--yellow); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; margin-bottom: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .svc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+  .svc-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    background: #12151f; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot.healthy { background: var(--green); }
+  .dot.degraded { background: var(--yellow); }
+  .dot.down { background: var(--red); }
+  .svc-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .svc-pillar { font-size: 10px; padding: 2px 5px; border-radius: 3px; flex-shrink: 0; }
+  .svc-pillar.health { background: #0d2e28; color: var(--pillar-health); }
+  .svc-pillar.agri { background: #1a2e1a; color: var(--pillar-agri); }
+  .svc-pillar.logistics { background: #0d1e3a; color: var(--pillar-logistics); }
+  .svc-pillar.maritime { background: #1d1a3a; color: var(--pillar-maritime); }
+  .svc-pillar.governance { background: #2e2410; color: var(--pillar-governance); }
+
+  .pillar-bars { display: flex; flex-direction: column; gap: 12px; }
+  .pillar-row { display: flex; align-items: center; gap: 10px; }
+  .pillar-label { width: 90px; font-size: 12px; text-transform: capitalize; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+  .pillar-pct { width: 36px; text-align: right; font-size: 11px; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 8px 12px; color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; }
+  .badge-green { background: #0d2e28; color: var(--green); }
+  .badge-red { background: #2e0d0d; color: var(--red); }
+  .badge-yellow { background: #2e2010; color: var(--yellow); }
+
+  .live-feed { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .feed-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px; background: #12151f; border-radius: 6px; }
+  .feed-time { font-size: 10px; color: var(--muted); flex-shrink: 0; margin-top: 1px; }
+  .feed-msg { font-size: 12px; flex: 1; }
+
+  .export-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+
+  #updatedAt { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Kinara OS <span>Admin Dashboard</span></div>
+  <div class="header-right">
+    <span id="wsStatus" class="ws-badge disconnected">● WS Offline</span>
+    <span id="updatedAt">—</span>
+    <span class="role-badge" id="roleLabel">Admin</span>
+  </div>
+</header>
+
+<nav>
+  <div class="tab active" data-page="overview">Overview</div>
+  <div class="tab" data-page="services">Services (47)</div>
+  <div class="tab" data-page="transactions">Transactions</div>
+  <div class="tab" data-page="impact">Gates Foundation</div>
+</nav>
+
+<main>
+  <!-- OVERVIEW -->
+  <div class="page active" id="page-overview">
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi"><div class="kpi-label">Services Online</div><div class="kpi-value green" id="kpi-healthy">—</div><div class="kpi-sub">of 47 total</div></div>
+      <div class="kpi"><div class="kpi-label">Active Users</div><div class="kpi-value" id="kpi-users">—</div><div class="kpi-sub">last 1h</div></div>
+      <div class="kpi"><div class="kpi-label">Transactions (24h)</div><div class="kpi-value" id="kpi-txn">—</div><div class="kpi-sub" id="kpi-txn-vol">XOF —</div></div>
+      <div class="kpi"><div class="kpi-label">Error Rate</div><div class="kpi-value" id="kpi-err">—</div><div class="kpi-sub">last 1h</div></div>
+      <div class="kpi"><div class="kpi-label">Revenue (XOF)</div><div class="kpi-value" id="kpi-rev">—</div><div class="kpi-sub">today</div></div>
+      <div class="kpi"><div class="kpi-label">Patients</div><div class="kpi-value green" id="kpi-patients">—</div><div class="kpi-sub">registered today</div></div>
+      <div class="kpi"><div class="kpi-label">Farmers</div><div class="kpi-value green" id="kpi-farmers">—</div><div class="kpi-sub">active</div></div>
+      <div class="kpi"><div class="kpi-label">Active Outbreaks</div><div class="kpi-value" id="kpi-outbreaks">—</div><div class="kpi-sub" id="kpi-outbreaks-lbl">—</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Pillar Health</div>
+        <div class="pillar-bars" id="pillarBars"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Live Activity</div>
+        <div class="live-feed" id="liveFeed"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="page" id="page-services">
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0">All Services</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" onclick="filterServices('all')">All</button>
+          <button class="btn-secondary" onclick="filterServices('down')">Down</button>
+          <button class="btn-secondary" onclick="filterServices('health')">Health</button>
+          <button class="btn-secondary" onclick="filterServices('agri')">Agri</button>
+          <button class="btn-secondary" onclick="filterServices('logistics')">Logistics</button>
+          <button class="btn-secondary" onclick="filterServices('maritime')">Maritime</button>
+        </div>
+      </div>
+      <div class="svc-grid" id="svcGrid"></div>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="page" id="page-transactions">
+    <div class="card">
+      <div class="card-title">Transaction Log (Real-time)</div>
+      <table>
+        <thead><tr><th>Time</th><th>Service</th><th>Type</th><th>Amount</th><th>Currency</th><th>Status</th></tr></thead>
+        <tbody id="txnTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- GATES FOUNDATION -->
+  <div class="page" id="page-impact">
+    <div class="export-bar">
+      <button class="btn-primary" onclick="exportReport('json')">Export JSON</button>
+      <button class="btn-secondary" onclick="exportReport('csv')">Export CSV</button>
+    </div>
+    <div class="kpi-grid" id="impactKpis"></div>
+    <div class="card">
+      <div class="card-title">Impact Summary — Gates Foundation Pitch (Jan 2027)</div>
+      <table id="impactTable">
+        <thead><tr><th>Metric</th><th>Value</th><th>Target (Jan 2027)</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = location.hostname === 'localhost' ? 'http://localhost:8117' : '';
+let allServices = [];
+let currentFilter = 'all';
+let wsConn = null;
+
+// --- WebSocket ---
+function connectWS() {
+  const wsUrl = API.replace('http', 'ws') + '/ws';
+  wsConn = new WebSocket(wsUrl);
+  wsConn.onopen = () => {
+    document.getElementById('wsStatus').textContent = '● WS Live';
+    document.getElementById('wsStatus').className = 'ws-badge';
+  };
+  wsConn.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'metrics_update') updateUI(msg.data);
+  };
+  wsConn.onclose = () => {
+    document.getElementById('wsStatus').textContent = '● WS Offline';
+    document.getElementById('wsStatus').className = 'ws-badge disconnected';
+    setTimeout(connectWS, 5000);
+  };
+}
+
+// --- Fetch on load ---
+async function fetchMetrics() {
+  try {
+    const r = await fetch(`${API}/api/admin/metrics`);
+    const j = await r.json();
+    if (j.success) updateUI(j.data);
+  } catch (e) { console.error('fetch failed', e); }
+}
+
+function updateUI(data) {
+  allServices = data.services || [];
+
+  const healthy = allServices.filter(s => s.status === 'healthy').length;
+  const errPct = data.errorRate1h;
+
+  document.getElementById('kpi-healthy').textContent = `${healthy}/47`;
+  document.getElementById('kpi-users').textContent = (data.activeUsers || 0).toLocaleString();
+  document.getElementById('kpi-txn').textContent = (data.txnCount24h || 0).toLocaleString();
+  document.getElementById('kpi-txn-vol').textContent = `XOF ${((data.txnVolume24h||0)/1000).toFixed(0)}K`;
+  document.getElementById('kpi-err').textContent = errPct + '%';
+  document.getElementById('kpi-err').className = 'kpi-value ' + (errPct > 10 ? 'red' : errPct > 5 ? 'yellow' : 'green');
+  document.getElementById('kpi-rev').textContent = ((data.revenueXOF||0)/1000).toFixed(0) + 'K';
+  document.getElementById('kpi-patients').textContent = data.patientsRegistered || 0;
+  document.getElementById('kpi-farmers').textContent = (data.farmersRegistered || 0).toLocaleString();
+  const ob = data.outbreaksActive || 0;
+  document.getElementById('kpi-outbreaks').textContent = ob;
+  document.getElementById('kpi-outbreaks').className = 'kpi-value ' + (ob > 0 ? 'red' : 'green');
+  document.getElementById('kpi-outbreaks-lbl').textContent = ob > 0 ? '⚠ Alert active' : 'Clear';
+
+  document.getElementById('updatedAt').textContent = data.updatedAt
+    ? new Date(data.updatedAt).toLocaleTimeString() : '';
+
+  renderPillarBars(allServices);
+  renderServiceGrid(allServices);
+  addFeedEvent(data);
+}
+
+function renderPillarBars(services) {
+  const pillars = {};
+  const COLORS = { health:'var(--pillar-health)', agri:'var(--pillar-agri)',
+    logistics:'var(--pillar-logistics)', maritime:'var(--pillar-maritime)', governance:'var(--pillar-governance)' };
+  for (const s of services) {
+    if (!pillars[s.pillar]) pillars[s.pillar] = { total: 0, healthy: 0 };
+    pillars[s.pillar].total++;
+    if (s.status === 'healthy') pillars[s.pillar].healthy++;
+  }
+  const el = document.getElementById('pillarBars');
+  el.innerHTML = Object.entries(pillars).map(([p, v]) => {
+    const pct = v.total ? Math.round(v.healthy / v.total * 100) : 0;
+    return `<div class="pillar-row">
+      <div class="pillar-label">${p}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${COLORS[p]||'#555'}"></div></div>
+      <div class="pillar-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderServiceGrid(services) {
+  const el = document.getElementById('svcGrid');
+  const filtered = currentFilter === 'all' ? services :
+    currentFilter === 'down' ? services.filter(s => s.status !== 'healthy') :
+    services.filter(s => s.pillar === currentFilter);
+  el.innerHTML = filtered.map(s => `
+    <div class="svc-item">
+      <div class="dot ${s.status}"></div>
+      <div class="svc-name" title="${s.name}">${s.name.replace('-service','')}</div>
+      <div class="svc-pillar ${s.pillar}">${s.pillar}</div>
+    </div>`).join('');
+}
+
+function filterServices(f) { currentFilter = f; renderServiceGrid(allServices); }
+
+let feedCount = 0;
+const feedMessages = [
+  (d) => `Patient registered via SMS in ${['Lomé','Kara','Sokodé'][feedCount%3]}`,
+  (d) => `Market price query: MAIZE ${Math.floor(Math.random()*50+200)} XOF/kg`,
+  (d) => `Appointment booked: ${['CHU Lomé','Centre Kara','Hôpital Tsévié'][feedCount%3]}`,
+  (d) => `Payment: ${Math.floor(Math.random()*50000+5000)} XOF settled`,
+  (d) => `Farmer listing created: MAIZE ${Math.floor(Math.random()*500+100)}kg`,
+  (d) => `Lab order: MALARIA test ordered`,
+  (d) => `Vessel departure logged: Lomé → Tema`,
+  (d) => `Outbreak check: all clear in Maritime region`,
+];
+
+function addFeedEvent(data) {
+  const el = document.getElementById('liveFeed');
+  const msg = feedMessages[feedCount % feedMessages.length](data);
+  feedCount++;
+  const now = new Date().toLocaleTimeString();
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.innerHTML = `<span class="feed-time">${now}</span><span class="feed-msg">${msg}</span>`;
+  el.insertBefore(item, el.firstChild);
+  while (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+// Simulated transaction feed
+function generateTxn() {
+  const services = ['payment-service','wallet-service','farmer-finance-service','market-service'];
+  const types = ['credit','debit','settlement','conversion'];
+  const amounts = [5000,12500,75000,250000,1000000];
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${new Date().toLocaleTimeString()}</td>
+    <td>${services[Math.floor(Math.random()*services.length)]}</td>
+    <td>${types[Math.floor(Math.random()*types.length)]}</td>
+    <td>${amounts[Math.floor(Math.random()*amounts.length)].toLocaleString()}</td>
+    <td>XOF</td>
+    <td><span class="badge badge-green">success</span></td>`;
+  const tb = document.getElementById('txnTable');
+  tb.insertBefore(row, tb.firstChild);
+  while (tb.children.length > 50) tb.removeChild(tb.lastChild);
+}
+setInterval(generateTxn, 3000);
+
+// Gates report
+async function loadGatesReport() {
+  const targets = {
+    countriesDeployed: { target: 5, label: 'Countries Deployed' },
+    totalPatients: { target: 10000, label: 'Total Patients' },
+    totalFarmers: { target: 5000, label: 'Total Farmers' },
+    totalTransactions: { target: 100000, label: 'Total Transactions' },
+    revenueGeneratedUSD: { target: 500000, label: 'Revenue Generated (USD)' },
+    outbreaksContained: { target: 10, label: 'Outbreaks Contained' },
+    clinicsConnected: { target: 150, label: 'Clinics Connected' },
+  };
+  try {
+    const r = await fetch(`${API}/api/admin/gates-report`);
+    const j = await r.json();
+    if (!j.success) return;
+    const d = j.data;
+    const tb = document.querySelector('#impactTable tbody');
+    tb.innerHTML = Object.entries(targets).map(([k, meta]) => {
+      const val = d[k] || 0;
+      const tgt = meta.target;
+      const pct = Math.min(100, Math.round(val/tgt*100));
+      const ok = pct >= 80;
+      return `<tr>
+        <td>${meta.label}</td>
+        <td><strong>${typeof val==='number'&&val>999?val.toLocaleString():val}</strong></td>
+        <td>${typeof tgt==='number'&&tgt>999?tgt.toLocaleString():tgt}</td>
+        <td><span class="badge ${ok?'badge-green':'badge-yellow'}">${pct}%</span></td>
+      </tr>`;
+    }).join('');
+
+    const kpis = document.getElementById('impactKpis');
+    kpis.innerHTML = Object.entries(d).map(([k,v]) =>
+      `<div class="kpi"><div class="kpi-label">${k.replace(/([A-Z])/g,' $1').trim()}</div>
+       <div class="kpi-value green">${typeof v==='number'&&v>999?v.toLocaleString():v}</div></div>`
+    ).join('');
+  } catch (e) { console.error(e); }
+}
+
+function exportReport(fmt) {
+  window.open(`${API}/api/admin/gates-report?format=${fmt}`, '_blank');
+}
+
+// --- Nav tabs ---
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('page-' + tab.dataset.page).classList.add('active');
+    if (tab.dataset.page === 'impact') loadGatesReport();
+  });
+});
+
+// Boot
+connectWS();
+fetchMetrics();
+setInterval(fetchMetrics, 30000);
+</script>
+</body>
+</html>

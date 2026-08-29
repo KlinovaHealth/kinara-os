@@ -1,0 +1,112 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kinara-os-togo-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: kinara-os
+    environment: togo-prod
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: kinara-os
+  source:
+    repoURL: https://github.com/KlinovaHealth/kinara-os.git
+    targetRevision: main
+    path: infrastructure/helm/kinara-os
+    helm:
+      releaseName: kinara-togo
+      valueFiles:
+        - values.yaml
+        - values-togo-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kinara-togo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # HPA manages replicas; ignore drift
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kinara-os-staging
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: kinara-os
+    environment: staging
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: kinara-os
+  source:
+    repoURL: https://github.com/KlinovaHealth/kinara-os.git
+    targetRevision: staging
+    path: infrastructure/helm/kinara-os
+    helm:
+      releaseName: kinara-staging
+      valueFiles:
+        - values.yaml
+        - values-staging.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kinara-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  revisionHistoryLimit: 5
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kinara-os
+  namespace: argocd
+spec:
+  description: "Kinara OS — African coordination platform (Health/Agri/Logistics/Maritime)"
+  sourceRepos:
+    - https://github.com/KlinovaHealth/kinara-os.git
+    - https://registry.digitalocean.com/kinara/*
+  destinations:
+    - namespace: kinara-togo
+      server: https://kubernetes.default.svc
+    - namespace: kinara-staging
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  roles:
+    - name: kinara-team
+      description: Full access for Kinara engineering team
+      policies:
+        - p, proj:kinara-os:kinara-team, applications, *, kinara-os/*, allow
+      groups:
+        - KlinovaHealth
+    - name: government-readonly
+      description: Read-only for government health dashboard operators
+      policies:
+        - p, proj:kinara-os:government-readonly, applications, get, kinara-os/kinara-os-togo-prod, allow

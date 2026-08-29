@@ -1,0 +1,61 @@
+# Staging environment overrides
+global:
+  environment: staging
+  imageTag: latest
+  registry: registry.digitalocean.com/kinara
+  replicaCount: 1
+
+# Staging uses reduced resources
+defaultResources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# Disable HPA in staging — single replica per service
+hpa:
+  enabled: false
+
+# Staging DB — shared Postgres on same cluster
+postgresql:
+  host: postgres-staging
+  port: 5432
+  database: kinara_staging
+  sslMode: prefer
+
+# Disable PodDisruptionBudget in staging
+pdb:
+  enabled: false
+
+# Staging ingress — no TLS cert, use nip.io
+ingress:
+  enabled: true
+  className: nginx
+  host: kinara-staging.klinova.co
+  tls: false
+
+# Lower log verbosity than prod
+logLevel: info
+
+# Reduced Twilio rate limits for staging
+sms:
+  maxPerMinute: 10
+  provider: africastalking
+
+# Services included in staging
+services:
+  farmer-service: { enabled: true, port: 8084 }
+  market-service: { enabled: true, port: 8083 }
+  patient-service: { enabled: true, port: 8081 }
+  clinical-service: { enabled: true, port: 8082 }
+  payment-service: { enabled: true, port: 8107 }
+  sms-gateway: { enabled: true, port: 8101 }
+  analytics-service: { enabled: true, port: 8108 }
+  audit-service: { enabled: true, port: 8111 }
+  auth-service: { enabled: true, port: 8079 }
+  appointment-service: { enabled: true, port: 8120 }
+  immunization-service: { enabled: true, port: 8121 }
+  lab-service: { enabled: true, port: 8122 }
+  outbreak-service: { enabled: true, port: 8123 }
