@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet-service
+  namespace: kinara-os
+  labels:
+    app: fleet-service
+    pillar: logistics
+    version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fleet-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: fleet-service
+        pillar: logistics
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: fleet-service
+          image: registry.digitalocean.com/kinara/fleet-service:latest
+          ports:
+            - containerPort: 8089
+              name: https
+          env:
+            - name: PORT
+              value: "8089"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fleet-service-secrets
+                  key: database-url
+            - name: REDIS_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: fleet-service-secrets
+                  key: redis-addr
+            - name: JWT_PUBLIC_KEY_PATH
+              value: /etc/kinara/jwt/public.pem
+            - name: TLS_CERT_PATH
+              value: /etc/kinara/tls/server.crt
+            - name: TLS_KEY_PATH
+              value: /etc/kinara/tls/server.key
+            - name: TLS_CA_PATH
+              value: /etc/kinara/tls/ca.crt
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/kinara/tls
+              readOnly: true
+            - name: jwt-public-key
+              mountPath: /etc/kinara/jwt
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8089
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8089
+              scheme: HTTPS
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: kinara-tls-certs
+        - name: jwt-public-key
+          secret:
+            secretName: kinara-jwt-public-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet-service
+  namespace: kinara-os
+spec:
+  selector:
+    app: fleet-service
+  ports:
+    - port: 443
+      targetPort: 8089
+      name: https
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fleet-service-hpa
+  namespace: kinara-os
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fleet-service
+  minReplicas: 2
+  maxReplicas: 15
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fleet-service-pdb
+  namespace: kinara-os
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: fleet-service
