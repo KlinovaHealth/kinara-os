@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: kinara-os
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payment-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+      containers:
+      - name: payment-service
+        image: registry.digitalocean.com/kinara/payment-service:latest
+        ports:
+        - containerPort: 8107
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secrets
+              key: database-url
+        - name: JWT_PUBLIC_KEY_PATH
+          value: /etc/jwt/public.pem
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: shared-secrets
+              key: redis-url
+        - name: AES_KEY
+          valueFrom:
+            secretKeyRef:
+              name: shared-secrets
+              key: aes-key
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8107
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8107
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: kinara-os
+spec:
+  selector:
+    app: payment-service
+  ports:
+  - port: 8107
+    targetPort: 8107
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-service-hpa
+  namespace: kinara-os
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-service
+  minReplicas: 3
+  maxReplicas: 30
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-service-pdb
+  namespace: kinara-os
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: payment-service
