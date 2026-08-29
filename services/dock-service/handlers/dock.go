@@ -92,7 +92,7 @@ func (h *DockHandler) CreateOperation(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create operation")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID, Action: "create_operation", EntityType: "dock_operation", EntityID: op.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID.String(), Action: "create_operation", EntityType: "dock_operation", EntityID: op.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, op)
 }
 
@@ -138,7 +138,7 @@ func (h *DockHandler) StartOperation(w http.ResponseWriter, r *http.Request) {
 	}
 	op, _ := h.store.GetOperation(r.Context(), id)
 	if op != nil {
-		h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: op.PortID, ActorID: claims.UserID, Action: "start_operation", EntityType: "dock_operation", EntityID: id, CreatedAt: now})
+		h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: op.PortID, ActorID: claims.UserID.String(), Action: "start_operation", EntityType: "dock_operation", EntityID: id, CreatedAt: now})
 	}
 	respond(w, http.StatusOK, op)
 }
@@ -164,7 +164,7 @@ func (h *DockHandler) CompleteOperation(w http.ResponseWriter, r *http.Request) 
 	}
 	op, _ := h.store.GetOperation(r.Context(), id)
 	if op != nil {
-		h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: op.PortID, ActorID: claims.UserID, Action: "complete_operation", EntityType: "dock_operation", EntityID: id, CreatedAt: now})
+		h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: op.PortID, ActorID: claims.UserID.String(), Action: "complete_operation", EntityType: "dock_operation", EntityID: id, CreatedAt: now})
 	}
 	respond(w, http.StatusOK, op)
 }
@@ -189,13 +189,13 @@ func (h *DockHandler) ReportSafetyEvent(w http.ResponseWriter, r *http.Request) 
 		ID: uuid.New(), OperationID: opID, PortID: op.PortID,
 		EventType: req.EventType, Severity: req.Severity,
 		Description: req.Description, Injured: req.Injured,
-		ReportedBy: claims.UserID, CreatedAt: now,
+		ReportedBy: claims.UserID.String(), CreatedAt: now,
 	}
 	if err := h.store.ReportSafetyEvent(r.Context(), e); err != nil {
 		respondErr(w, http.StatusInternalServerError, "failed to report safety event")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: op.PortID, ActorID: claims.UserID, Action: "report_safety_event", EntityType: "safety_event", EntityID: e.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: op.PortID, ActorID: claims.UserID.String(), Action: "report_safety_event", EntityType: "safety_event", EntityID: e.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, e)
 }
 
@@ -224,7 +224,7 @@ func (h *DockHandler) CreateEquipment(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create equipment")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID, Action: "create_equipment", EntityType: "dock_equipment", EntityID: e.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.DockAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID.String(), Action: "create_equipment", EntityType: "dock_equipment", EntityID: e.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, e)
 }
 

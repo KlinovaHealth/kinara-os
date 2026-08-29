@@ -54,7 +54,7 @@ func (h *RouteHandler) create(w http.ResponseWriter, r *http.Request) {
 		FreightClass:req.FreightClass, Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if route.RouteCode=="" { route.RouteCode="RT-"+uuid.New().String()[:8] }
 	if err := h.s.CreateRoute(r.Context(), route); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, route.ID, claims.UserID, "create_route", "route")
+	h.audit(r, route.ID, claims.UserID.String(), "create_route", "route")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:route})
 }
 
@@ -92,7 +92,7 @@ func (h *RouteHandler) schedule(w http.ResponseWriter, r *http.Request) {
 	s := models.RouteSchedule{ID:uuid.New(), RouteID:routeID, VehicleID:vid, DriverID:did,
 		DepartureTime:deptTime.UTC(), Status:"scheduled", Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.ScheduleRoute(r.Context(), s); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, routeID, claims.UserID, "schedule_route", "schedule")
+	h.audit(r, routeID, claims.UserID.String(), "schedule_route", "schedule")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:s})
 }
 

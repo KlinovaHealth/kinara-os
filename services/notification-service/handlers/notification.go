@@ -346,7 +346,7 @@ func (h *Handler) getTemplate(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getPreferences(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.ClaimsFromContext(r.Context())
-	prefs, err := h.queries.GetOrCreatePreferences(r.Context(), claims.UserID)
+	prefs, err := h.queries.GetOrCreatePreferences(r.Context(), claims.UserID.String())
 	if err != nil {
 		h.internalError(w, "failed to get preferences")
 		return
@@ -383,7 +383,7 @@ func (h *Handler) updatePreferences(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p := db.UpdatePreferencesParams{
-		UserID:          claims.UserID,
+		UserID:          claims.UserID.String(),
 		SMSEnabled:      req.SMSEnabled,
 		PushEnabled:     req.PushEnabled,
 		WhatsAppEnabled: req.WhatsAppEnabled,
@@ -400,7 +400,7 @@ func (h *Handler) updatePreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prefs, _ := h.queries.GetOrCreatePreferences(r.Context(), claims.UserID)
+	prefs, _ := h.queries.GetOrCreatePreferences(r.Context(), claims.UserID.String())
 	h.json(w, http.StatusOK, models.APIResponse{Success: true, Data: prefs})
 }
 
@@ -498,7 +498,7 @@ func (h *Handler) audit(r *http.Request, claims *auth.Claims, notifID *uuid.UUID
 	h.queries.InsertAuditLog(r.Context(), models.NotificationAuditLog{
 		ID:             uuid.New(),
 		NotificationID: notifID,
-		UserID:         claims.UserID,
+		UserID:         claims.UserID.String(),
 		Action:         action,
 		Resource:       resource,
 		IPAddress:      remoteIP(r),

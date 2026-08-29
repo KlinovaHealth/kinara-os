@@ -113,7 +113,7 @@ func (h *CoopHandler) createCoop(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, coop.ID, claims.UserID, "create_coop", "cooperative")
+	h.audit(r, coop.ID, claims.UserID.String(), "create_coop", "cooperative")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: coop})
 }
 
@@ -211,7 +211,7 @@ func (h *CoopHandler) addMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.s.UpdateCoopStats(r.Context(), coopID, now)
-	h.audit(r, member.ID, claims.UserID, "add_member", "member")
+	h.audit(r, member.ID, claims.UserID.String(), "add_member", "member")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: member})
 }
 
@@ -269,7 +269,7 @@ func (h *CoopHandler) updateMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, id, claims.UserID, "update_member", "member")
+	h.audit(r, id, claims.UserID.String(), "update_member", "member")
 	updated, _ := h.s.GetMember(r.Context(), id)
 	writeJSON(w, http.StatusOK, models.APIResponse{Success: true, Data: updated})
 }
@@ -330,7 +330,7 @@ func (h *CoopHandler) createPool(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, pool.ID, claims.UserID, "create_pool", "selling_pool")
+	h.audit(r, pool.ID, claims.UserID.String(), "create_pool", "selling_pool")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: pool})
 }
 
@@ -415,7 +415,7 @@ func (h *CoopHandler) contribute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.s.AddPoolQuantity(r.Context(), poolID, req.QuantityKg, now)
-	h.audit(r, contribution.ID, claims.UserID, "contribute", "pool_contribution")
+	h.audit(r, contribution.ID, claims.UserID.String(), "contribute", "pool_contribution")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: contribution})
 }
 
@@ -458,7 +458,7 @@ func (h *CoopHandler) closePool(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, poolID, claims.UserID, "close_pool", "selling_pool")
+	h.audit(r, poolID, claims.UserID.String(), "close_pool", "selling_pool")
 	updated, _ := h.s.GetPool(r.Context(), poolID)
 	writeJSON(w, http.StatusOK, models.APIResponse{Success: true, Data: updated})
 }
@@ -498,7 +498,7 @@ func (h *CoopHandler) recordSale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.s.DistributePayouts(r.Context(), poolID, req.TotalRevenue, now)
-	h.audit(r, poolID, claims.UserID, "record_sale", "selling_pool")
+	h.audit(r, poolID, claims.UserID.String(), "record_sale", "selling_pool")
 	updated, _ := h.s.GetPool(r.Context(), poolID)
 	writeJSON(w, http.StatusOK, models.APIResponse{Success: true, Data: updated})
 }
@@ -519,7 +519,7 @@ func (h *CoopHandler) markPaid(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, id, claims.UserID, "mark_payout_paid", "pool_contribution")
+	h.audit(r, id, claims.UserID.String(), "mark_payout_paid", "pool_contribution")
 	updated, _ := h.s.GetContribution(r.Context(), id)
 	writeJSON(w, http.StatusOK, models.APIResponse{Success: true, Data: updated})
 }

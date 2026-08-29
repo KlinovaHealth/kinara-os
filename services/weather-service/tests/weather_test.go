@@ -125,7 +125,7 @@ func setupRouter(store handlers.Store) *mux.Router {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			claims := &auth.Claims{UserID: uuid.New().String(), Role: "agronomist", FacilityID: "KE"}
+			claims := &auth.Claims{UserID: uuid.New(), Role: "agronomist"}
 			ctx := middleware.SetClaims(r.Context(), claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

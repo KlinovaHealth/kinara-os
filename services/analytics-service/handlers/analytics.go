@@ -83,7 +83,7 @@ func (h *Handler) RecordImpact(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "failed to record metric"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "record_impact", EntityType: "impact_metric", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "record_impact", EntityType: "impact_metric", EntityID: id, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: m})
 }
 
@@ -142,7 +142,7 @@ func (h *Handler) CreateSummary(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "failed to create summary"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_summary", EntityType: "cross_pillar_summary", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_summary", EntityType: "cross_pillar_summary", EntityID: id, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: summary})
 }
 
@@ -198,7 +198,7 @@ func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "failed to generate report"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "generate_report", EntityType: "government_report", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "generate_report", EntityType: "government_report", EntityID: id, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: report})
 }
 
@@ -252,7 +252,7 @@ func (h *Handler) ReportBottleneck(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "failed to report bottleneck"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "report_bottleneck", EntityType: "bottleneck", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.AnalyticsAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "report_bottleneck", EntityType: "bottleneck", EntityID: id, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: b})
 }
 

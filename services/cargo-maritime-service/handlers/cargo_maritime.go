@@ -68,7 +68,7 @@ func (h *CargoMaritimeHandler) RegisterContainer(w http.ResponseWriter, r *http.
 		respondErr(w, http.StatusBadRequest, "container_no required")
 		return
 	}
-	ownerID, _ := uuid.Parse(claims.UserID)
+	ownerID := claims.UserID
 	now := time.Now().UTC()
 	c := models.Container{
 		ID: uuid.New(), ContainerNo: req.ContainerNo,
@@ -80,7 +80,7 @@ func (h *CargoMaritimeHandler) RegisterContainer(w http.ResponseWriter, r *http.
 		respondErr(w, http.StatusInternalServerError, "failed to register container")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "register_container", EntityType: "container", EntityID: c.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "register_container", EntityType: "container", EntityID: c.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, c)
 }
 
@@ -122,7 +122,7 @@ func (h *CargoMaritimeHandler) UpdateContainerStatus(w http.ResponseWriter, r *h
 		respondErr(w, http.StatusInternalServerError, "failed to update status")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "update_container_status:" + req.Status, EntityType: "container", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "update_container_status:" + req.Status, EntityType: "container", EntityID: id, CreatedAt: now})
 	c, _ := h.store.GetContainer(r.Context(), id)
 	respond(w, http.StatusOK, c)
 }
@@ -150,14 +150,14 @@ func (h *CargoMaritimeHandler) ReportDamage(w http.ResponseWriter, r *http.Reque
 	d := models.DamageReport{
 		ID: uuid.New(), ContainerID: containerID, ContainerNo: c.ContainerNo,
 		DamageLevel: models.DamageLevel(req.DamageLevel), Description: req.Description,
-		PhotoURL: req.PhotoURL, ReportedBy: claims.UserID,
+		PhotoURL: req.PhotoURL, ReportedBy: claims.UserID.String(),
 		EstimatedCost: req.EstimatedCost, Currency: currency, PortID: portID, CreatedAt: now,
 	}
 	if err := h.store.ReportDamage(r.Context(), d); err != nil {
 		respondErr(w, http.StatusInternalServerError, "failed to report damage")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "report_damage", EntityType: "damage_report", EntityID: d.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "report_damage", EntityType: "damage_report", EntityID: d.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, d)
 }
 
@@ -199,7 +199,7 @@ func (h *CargoMaritimeHandler) CreateManifest(w http.ResponseWriter, r *http.Req
 		respondErr(w, http.StatusInternalServerError, "failed to create manifest")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_manifest", EntityType: "cargo_manifest", EntityID: m.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_manifest", EntityType: "cargo_manifest", EntityID: m.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, m)
 }
 
@@ -230,7 +230,7 @@ func (h *CargoMaritimeHandler) AddContainerToManifest(w http.ResponseWriter, r *
 		respondErr(w, http.StatusInternalServerError, "failed to add container to manifest")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "add_container_to_manifest", EntityType: "manifest_container", EntityID: mc.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "add_container_to_manifest", EntityType: "manifest_container", EntityID: mc.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, mc)
 }
 
@@ -243,7 +243,7 @@ func (h *CargoMaritimeHandler) FinalizeManifest(w http.ResponseWriter, r *http.R
 		respondErr(w, http.StatusInternalServerError, "failed to finalize manifest")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "finalize_manifest", EntityType: "cargo_manifest", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CargoMaritimeAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "finalize_manifest", EntityType: "cargo_manifest", EntityID: id, CreatedAt: now})
 	m, _ := h.store.GetManifest(r.Context(), id)
 	respond(w, http.StatusOK, m)
 }

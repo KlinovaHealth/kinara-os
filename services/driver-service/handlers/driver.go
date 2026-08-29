@@ -58,7 +58,7 @@ func (h *DriverHandler) create(w http.ResponseWriter, r *http.Request) {
 		Status:models.DriverAvailable, Country:req.Country, BaseLocation:req.BaseLocation,
 		TotalTrips:0, TotalKm:0, Rating:5.0, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreateDriver(r.Context(), row); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, row.ID, claims.UserID, "create_driver", "driver")
+	h.audit(r, row.ID, claims.UserID.String(), "create_driver", "driver")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:h.decryptDriver(row)})
 }
 
@@ -94,7 +94,7 @@ func (h *DriverHandler) update(w http.ResponseWriter, r *http.Request) {
 	var req models.UpdateDriverRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { writeError(w,400,"BAD_REQUEST","invalid JSON"); return }
 	if err := h.s.UpdateDriver(r.Context(), id, req, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "update_driver", "driver")
+	h.audit(r, id, claims.UserID.String(), "update_driver", "driver")
 	row,_ := h.s.GetDriver(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:h.decryptDriver(*row)})
 }

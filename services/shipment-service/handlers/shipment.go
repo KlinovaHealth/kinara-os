@@ -48,7 +48,7 @@ func (h *ShipmentHandler) create(w http.ResponseWriter, r *http.Request) {
 	if req.RecipientName=="" || req.OriginAddress=="" || req.DestAddress=="" || req.WeightKg<=0 { writeError(w,400,"VALIDATION_ERROR","recipient_name, origin_address, destination_address, weight_kg required"); return }
 	if req.ServiceLevel=="" { req.ServiceLevel=models.ServiceStandard }
 	if req.Currency=="" { req.Currency="USD" }
-	senderID,_ := uuid.Parse(claims.UserID)
+	senderID := claims.UserID
 	freightCharge := req.WeightKg * 2.5
 	insuranceCharge := req.DeclaredValue * 0.005
 	now := time.Now().UTC()
@@ -60,7 +60,7 @@ func (h *ShipmentHandler) create(w http.ResponseWriter, r *http.Request) {
 		FreightCharge:freightCharge, InsuranceCharge:insuranceCharge, TotalCharge:freightCharge+insuranceCharge,
 		Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreateShipment(r.Context(), s); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, s.ID, claims.UserID, "create_shipment", "shipment")
+	h.audit(r, s.ID, claims.UserID.String(), "create_shipment", "shipment")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:s})
 }
 
@@ -96,7 +96,7 @@ func (h *ShipmentHandler) updateStatus(w http.ResponseWriter, r *http.Request) {
 	var body struct{ Status models.ShipmentStatus `json:"status"` }
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil { writeError(w,400,"BAD_REQUEST","invalid JSON"); return }
 	if err := h.s.UpdateShipmentStatus(r.Context(), id, body.Status, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "update_status:"+string(body.Status), "shipment")
+	h.audit(r, id, claims.UserID.String(), "update_status:"+string(body.Status), "shipment")
 	s,_ := h.s.GetShipment(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:s})
 }

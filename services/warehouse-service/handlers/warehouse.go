@@ -53,7 +53,7 @@ func (h *WarehouseHandler) create(w http.ResponseWriter, r *http.Request) {
 		Latitude:req.Latitude, Longitude:req.Longitude, CapacityM3:req.CapacityM3, UsedM3:0, Status:models.WarehouseActive,
 		ManagerName:req.ManagerName, ContactPhone:req.ContactPhone, Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreateWarehouse(r.Context(), wh); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, wh.ID, claims.UserID, "create_warehouse", "warehouse")
+	h.audit(r, wh.ID, claims.UserID.String(), "create_warehouse", "warehouse")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:wh})
 }
 
@@ -118,13 +118,13 @@ func (h *WarehouseHandler) recordMovement(w http.ResponseWriter, r *http.Request
 	if err != nil { writeError(w,400,"INVALID_ID","invalid stock_item_id"); return }
 	if req.Quantity<=0 { writeError(w,400,"VALIDATION_ERROR","quantity must be positive"); return }
 	now := time.Now().UTC()
-	recorderID,_ := uuid.Parse(claims.UserID)
+	recorderID := claims.UserID
 	var refID *uuid.UUID
 	if req.RefID!="" { if id,err:=uuid.Parse(req.RefID); err==nil { refID=&id } }
 	m := models.StockMovement{ID:uuid.New(), WarehouseID:whID, StockItemID:itemID, MovementType:req.MovementType,
 		Quantity:req.Quantity, RefID:refID, RefType:req.RefType, Notes:req.Notes, RecordedBy:recorderID, CreatedAt:now}
 	if err := h.s.RecordMovement(r.Context(), m, now); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, whID, claims.UserID, "record_movement:"+string(req.MovementType), "warehouse")
+	h.audit(r, whID, claims.UserID.String(), "record_movement:"+string(req.MovementType), "warehouse")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:m})
 }
 

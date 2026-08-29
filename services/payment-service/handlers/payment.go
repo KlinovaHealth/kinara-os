@@ -88,7 +88,7 @@ func (h *Handler) CreateWallet(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "failed to create wallet"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_wallet", EntityType: "wallet", EntityID: wallet.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_wallet", EntityType: "wallet", EntityID: wallet.ID, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: wallet})
 }
 
@@ -136,7 +136,7 @@ func (h *Handler) CreditWallet(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "credit failed"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "credit_wallet", EntityType: "transaction", EntityID: txnID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "credit_wallet", EntityType: "transaction", EntityID: txnID, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: txn})
 }
 
@@ -174,7 +174,7 @@ func (h *Handler) DebitWallet(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "debit failed"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "debit_wallet", EntityType: "transaction", EntityID: txnID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "debit_wallet", EntityType: "transaction", EntityID: txnID, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: txn})
 }
 
@@ -262,7 +262,7 @@ func (h *Handler) ConvertCurrency(w http.ResponseWriter, r *http.Request) {
 		Status: models.TxnCompleted, CreatedAt: now,
 	}
 	h.store.CreateConversion(r.Context(), conv)
-	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "convert_currency", EntityType: "currency_conversion", EntityID: convID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "convert_currency", EntityType: "currency_conversion", EntityID: convID, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: conv})
 }
 
@@ -314,7 +314,7 @@ func (h *Handler) CreateSettlement(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "failed to create settlement"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_settlement", EntityType: "settlement", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_settlement", EntityType: "settlement", EntityID: id, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: settlement})
 }
 
@@ -345,6 +345,6 @@ func (h *Handler) ConfirmSettlement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s, _ := h.store.GetSettlement(r.Context(), id)
-	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "confirm_settlement", EntityType: "settlement", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PaymentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "confirm_settlement", EntityType: "settlement", EntityID: id, CreatedAt: now})
 	respond(w, 200, models.APIResponse{Success: true, Data: s})
 }

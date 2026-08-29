@@ -53,7 +53,7 @@ func (h *CargoHandler) create(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	var estDelivery *time.Time
 	if req.EstimatedDelivery!=nil { if t,err:=time.Parse(time.RFC3339,*req.EstimatedDelivery); err==nil { tUTC:=t.UTC(); estDelivery=&tUTC } }
-	shipperID,_ := uuid.Parse(claims.UserID)
+	shipperID := claims.UserID
 	b := models.CargoBooking{ID:uuid.New(), BookingRef:"KN-"+uuid.New().String()[:8],
 		ShipperID:shipperID, CargoType:req.CargoType, Description:req.Description,
 		WeightKg:req.WeightKg, VolumeM3:req.VolumeM3, Status:models.CargoPending,
@@ -62,7 +62,7 @@ func (h *CargoHandler) create(w http.ResponseWriter, r *http.Request) {
 		EstimatedDelivery:estDelivery, FreightCost:req.FreightCost, Currency:req.Currency,
 		Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreateBooking(r.Context(), b); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, b.ID, claims.UserID, "create_booking", "cargo")
+	h.audit(r, b.ID, claims.UserID.String(), "create_booking", "cargo")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:b})
 }
 
@@ -102,7 +102,7 @@ func (h *CargoHandler) assign(w http.ResponseWriter, r *http.Request) {
 	did,err := uuid.Parse(req.DriverID)
 	if err != nil { writeError(w,400,"INVALID_DRIVER_ID","invalid driver_id"); return }
 	if err := h.s.AssignCargo(r.Context(), id, vid, did, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "assign_cargo", "cargo")
+	h.audit(r, id, claims.UserID.String(), "assign_cargo", "cargo")
 	b,_ := h.s.GetBooking(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:b})
 }
@@ -115,7 +115,7 @@ func (h *CargoHandler) updateStatus(w http.ResponseWriter, r *http.Request) {
 	var body struct{ Status models.CargoStatus `json:"status"` }
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil { writeError(w,400,"BAD_REQUEST","invalid JSON"); return }
 	if err := h.s.UpdateBookingStatus(r.Context(), id, body.Status, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "update_status:"+string(body.Status), "cargo")
+	h.audit(r, id, claims.UserID.String(), "update_status:"+string(body.Status), "cargo")
 	b,_ := h.s.GetBooking(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:b})
 }

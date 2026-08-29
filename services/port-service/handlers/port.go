@@ -85,7 +85,7 @@ func (h *PortHandler) CreatePort(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create port")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: id, ActorID: claims.UserID, Action: "create_port", EntityType: "port", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: id, ActorID: claims.UserID.String(), Action: "create_port", EntityType: "port", EntityID: id, CreatedAt: now})
 	respond(w, http.StatusCreated, p)
 }
 
@@ -129,7 +129,7 @@ func (h *PortHandler) CreateBerth(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create berth")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID, Action: "create_berth", EntityType: "berth", EntityID: b.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID.String(), Action: "create_berth", EntityType: "berth", EntityID: b.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, b)
 }
 
@@ -199,7 +199,7 @@ func (h *PortHandler) ScheduleBerth(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to schedule berth")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: berth.PortID, ActorID: claims.UserID, Action: "schedule_berth", EntityType: "berth_schedule", EntityID: s.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: berth.PortID, ActorID: claims.UserID.String(), Action: "schedule_berth", EntityType: "berth_schedule", EntityID: s.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, s)
 }
 
@@ -257,7 +257,7 @@ func (h *PortHandler) CreateAlert(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create alert")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID, Action: "create_alert", EntityType: "congestion_alert", EntityID: a.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.PortAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID.String(), Action: "create_alert", EntityType: "congestion_alert", EntityID: a.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, a)
 }
 

@@ -66,7 +66,7 @@ func (h *VesselHandler) RegisterVessel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now().UTC()
-	operatorID, _ := uuid.Parse(claims.UserID)
+	operatorID := claims.UserID
 	v := models.Vessel{
 		ID: uuid.New(), IMONumber: req.IMONumber, Name: req.Name,
 		VesselType: models.VesselType(req.VesselType), Flag: req.Flag, Owner: req.Owner,
@@ -79,7 +79,7 @@ func (h *VesselHandler) RegisterVessel(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to register vessel")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: v.ID, ActorID: claims.UserID, Action: "register_vessel", CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: v.ID, ActorID: claims.UserID.String(), Action: "register_vessel", CreatedAt: now})
 	respond(w, http.StatusCreated, v)
 }
 
@@ -115,7 +115,7 @@ func (h *VesselHandler) UpdateCondition(w http.ResponseWriter, r *http.Request) 
 		respondErr(w, http.StatusInternalServerError, "failed to update condition")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: id, ActorID: claims.UserID, Action: "update_condition:" + req.Condition, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: id, ActorID: claims.UserID.String(), Action: "update_condition:" + req.Condition, CreatedAt: now})
 	v, _ := h.store.GetVessel(r.Context(), id)
 	respond(w, http.StatusOK, v)
 }
@@ -157,7 +157,7 @@ func (h *VesselHandler) LogVoyage(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to log voyage")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: vesselID, ActorID: claims.UserID, Action: "log_voyage", CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: vesselID, ActorID: claims.UserID.String(), Action: "log_voyage", CreatedAt: now})
 	respond(w, http.StatusCreated, voy)
 }
 
@@ -197,7 +197,7 @@ func (h *VesselHandler) LogMaintenance(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to log maintenance")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: vesselID, ActorID: claims.UserID, Action: "log_maintenance:" + req.MaintenanceType, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.VesselAuditLog{ID: uuid.New(), VesselID: vesselID, ActorID: claims.UserID.String(), Action: "log_maintenance:" + req.MaintenanceType, CreatedAt: now})
 	respond(w, http.StatusCreated, m)
 }
 

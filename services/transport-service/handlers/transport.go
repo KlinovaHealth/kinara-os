@@ -58,7 +58,7 @@ func (h *TransportHandler) create(w http.ResponseWriter, r *http.Request) {
 		DestAddress:req.DestAddress, DestLat:req.DestLat, DestLng:req.DestLng, ScheduledPickup:pickup.UTC(), ScheduledDelivery:schedDel,
 		DistanceKm:req.DistanceKm, CostPerKm:req.CostPerKm, TotalCost:req.DistanceKm*req.CostPerKm, Currency:req.Currency, Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreateTrip(r.Context(), t); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, t.ID, claims.UserID, "create_trip", "transport")
+	h.audit(r, t.ID, claims.UserID.String(), "create_trip", "transport")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:t})
 }
 
@@ -88,7 +88,7 @@ func (h *TransportHandler) updateStatus(w http.ResponseWriter, r *http.Request) 
 	var req models.UpdateTripStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { writeError(w,400,"BAD_REQUEST","invalid JSON"); return }
 	if err := h.s.UpdateTripStatus(r.Context(), id, req.Status, req.DelayReasonCode, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "update_status:"+string(req.Status), "transport")
+	h.audit(r, id, claims.UserID.String(), "update_status:"+string(req.Status), "transport")
 	t,_ := h.s.GetTrip(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:t})
 }

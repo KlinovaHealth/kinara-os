@@ -68,7 +68,7 @@ func (h *ShippingHandler) CreateBooking(w http.ResponseWriter, r *http.Request) 
 	}
 	polID, _ := uuid.Parse(req.PortOfLoading)
 	podID, _ := uuid.Parse(req.PortOfDischarge)
-	shipperID, _ := uuid.Parse(claims.UserID)
+	shipperID := claims.UserID
 	currency := req.Currency
 	if currency == "" { currency = "USD" }
 	insurancePct := req.InsurancePct
@@ -95,7 +95,7 @@ func (h *ShippingHandler) CreateBooking(w http.ResponseWriter, r *http.Request) 
 		respondErr(w, http.StatusInternalServerError, "failed to create booking")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_booking", EntityType: "freight_booking", EntityID: b.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_booking", EntityType: "freight_booking", EntityID: b.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, b)
 }
 
@@ -134,7 +134,7 @@ func (h *ShippingHandler) UpdateBookingStatus(w http.ResponseWriter, r *http.Req
 		respondErr(w, http.StatusInternalServerError, "failed to update status")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "update_booking_status:" + req.Status, EntityType: "freight_booking", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "update_booking_status:" + req.Status, EntityType: "freight_booking", EntityID: id, CreatedAt: now})
 	b, _ := h.store.GetBooking(r.Context(), id)
 	respond(w, http.StatusOK, b)
 }
@@ -170,7 +170,7 @@ func (h *ShippingHandler) IssueBOL(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to issue BOL")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "issue_bol", EntityType: "bill_of_lading", EntityID: bol.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "issue_bol", EntityType: "bill_of_lading", EntityID: bol.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, bol)
 }
 
@@ -191,7 +191,7 @@ func (h *ShippingHandler) SurrenderBOL(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to surrender BOL")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "surrender_bol", EntityType: "bill_of_lading", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "surrender_bol", EntityType: "bill_of_lading", EntityID: id, CreatedAt: now})
 	bol, _ := h.store.GetBOL(r.Context(), id)
 	respond(w, http.StatusOK, bol)
 }
@@ -224,7 +224,7 @@ func (h *ShippingHandler) RecordDemurrage(w http.ResponseWriter, r *http.Request
 		respondErr(w, http.StatusInternalServerError, "failed to record demurrage")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "record_demurrage", EntityType: "demurrage_record", EntityID: d.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.ShippingAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "record_demurrage", EntityType: "demurrage_record", EntityID: d.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, d)
 }
 

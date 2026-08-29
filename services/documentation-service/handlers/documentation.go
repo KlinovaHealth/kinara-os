@@ -86,7 +86,7 @@ func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 		respond(w, 500, models.APIResponse{Error: "failed to create document"})
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.DocumentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_document", EntityType: "trade_document", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.DocumentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_document", EntityType: "trade_document", EntityID: id, CreatedAt: now})
 	respond(w, 201, models.APIResponse{Success: true, Data: doc})
 }
 
@@ -140,7 +140,7 @@ func (h *Handler) IssueDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	doc, _ := h.store.GetDocument(r.Context(), id)
-	h.store.InsertAuditLog(r.Context(), models.DocumentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "issue_document", EntityType: "trade_document", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.DocumentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "issue_document", EntityType: "trade_document", EntityID: id, CreatedAt: now})
 	respond(w, 200, models.APIResponse{Success: true, Data: doc})
 }
 
@@ -157,6 +157,6 @@ func (h *Handler) RevokeDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	doc, _ := h.store.GetDocument(r.Context(), id)
-	h.store.InsertAuditLog(r.Context(), models.DocumentAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "revoke_document", EntityType: "trade_document", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.DocumentAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "revoke_document", EntityType: "trade_document", EntityID: id, CreatedAt: now})
 	respond(w, 200, models.APIResponse{Success: true, Data: doc})
 }

@@ -102,7 +102,7 @@ func (h *MarketHandler) createListing(w http.ResponseWriter, r *http.Request) {
 			availUntil = &tUTC
 		}
 	}
-	farmerID, _ := uuid.Parse(claims.UserID)
+	farmerID := claims.UserID
 	listing := models.MarketListing{
 		ID:             uuid.New(),
 		FarmerID:       farmerID,
@@ -129,7 +129,7 @@ func (h *MarketHandler) createListing(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, listing.ID, claims.UserID, "create_listing", "listing")
+	h.audit(r, listing.ID, claims.UserID.String(), "create_listing", "listing")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: listing})
 }
 
@@ -207,7 +207,7 @@ func (h *MarketHandler) updateListing(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "listing not found")
 		return
 	}
-	farmerID, _ := uuid.Parse(claims.UserID)
+	farmerID := claims.UserID
 	if existing.FarmerID != farmerID {
 		writeError(w, http.StatusForbidden, "FORBIDDEN", "not your listing")
 		return
@@ -222,7 +222,7 @@ func (h *MarketHandler) updateListing(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, id, claims.UserID, "update_listing", "listing")
+	h.audit(r, id, claims.UserID.String(), "update_listing", "listing")
 	updated, _ := h.s.GetListing(r.Context(), id)
 	writeJSON(w, http.StatusOK, models.APIResponse{Success: true, Data: updated})
 }
@@ -273,7 +273,7 @@ func (h *MarketHandler) placeBid(w http.ResponseWriter, r *http.Request) {
 			expiresAt = &tUTC
 		}
 	}
-	buyerID, _ := uuid.Parse(claims.UserID)
+	buyerID := claims.UserID
 	bid := models.MarketBid{
 		ID:         uuid.New(),
 		ListingID:  listingID,
@@ -291,7 +291,7 @@ func (h *MarketHandler) placeBid(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, bid.ID, claims.UserID, "place_bid", "bid")
+	h.audit(r, bid.ID, claims.UserID.String(), "place_bid", "bid")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: bid})
 }
 
@@ -348,7 +348,7 @@ func (h *MarketHandler) respondBid(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	farmerID, _ := uuid.Parse(claims.UserID)
+	farmerID := claims.UserID
 	if listing.FarmerID != farmerID {
 		writeError(w, http.StatusForbidden, "FORBIDDEN", "not your listing")
 		return
@@ -378,7 +378,7 @@ func (h *MarketHandler) respondBid(w http.ResponseWriter, r *http.Request) {
 			Status:        &newStatus,
 		}, now)
 	}
-	h.audit(r, id, claims.UserID, "respond_bid:"+string(req.Status), "bid")
+	h.audit(r, id, claims.UserID.String(), "respond_bid:"+string(req.Status), "bid")
 	updated, _ := h.s.GetBid(r.Context(), id)
 	writeJSON(w, http.StatusOK, models.APIResponse{Success: true, Data: updated})
 }
@@ -406,7 +406,7 @@ func (h *MarketHandler) recordPrice(w http.ResponseWriter, r *http.Request) {
 	if req.Source == "" {
 		req.Source = "reported"
 	}
-	recorderID, _ := uuid.Parse(claims.UserID)
+	recorderID := claims.UserID
 	record := models.PriceRecord{
 		ID:         uuid.New(),
 		CropType:   req.CropType,

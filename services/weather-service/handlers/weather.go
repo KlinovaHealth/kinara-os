@@ -121,7 +121,7 @@ func (h *WeatherHandler) createForecast(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, f.ID, claims.UserID, "create_forecast", "forecast")
+	h.audit(r, f.ID, claims.UserID.String(), "create_forecast", "forecast")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: f})
 }
 
@@ -223,7 +223,7 @@ func (h *WeatherHandler) createAlert(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, alert.ID, claims.UserID, "create_alert", "alert")
+	h.audit(r, alert.ID, claims.UserID.String(), "create_alert", "alert")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: alert})
 }
 
@@ -268,7 +268,7 @@ func (h *WeatherHandler) deactivateAlert(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, id, claims.UserID, "deactivate_alert", "alert")
+	h.audit(r, id, claims.UserID.String(), "deactivate_alert", "alert")
 	updated, _ := h.s.GetAlert(r.Context(), id)
 	writeJSON(w, http.StatusOK, models.APIResponse{Success: true, Data: updated})
 }
@@ -335,7 +335,7 @@ func (h *WeatherHandler) createAdvisory(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "DB_ERROR", err.Error())
 		return
 	}
-	h.audit(r, advisory.ID, claims.UserID, "create_advisory", "pest_advisory")
+	h.audit(r, advisory.ID, claims.UserID.String(), "create_advisory", "pest_advisory")
 	writeJSON(w, http.StatusCreated, models.APIResponse{Success: true, Data: advisory})
 }
 
@@ -395,7 +395,7 @@ func (h *WeatherHandler) submitObservation(w http.ResponseWriter, r *http.Reques
 			observedAt = t.UTC()
 		}
 	}
-	reporterID, _ := uuid.Parse(claims.UserID)
+	reporterID := claims.UserID
 	obs := models.WeatherObservation{
 		ID:           uuid.New(),
 		ReporterID:   reporterID,

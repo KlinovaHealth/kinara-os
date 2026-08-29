@@ -58,7 +58,7 @@ func (h *ComplianceHandler) createPermit(w http.ResponseWriter, r *http.Request)
 		RouteRestriction:req.RouteRestriction, MaxWeightKg:req.MaxWeightKg, ValidFrom:from.UTC(), ValidUntil:until.UTC(),
 		Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreatePermit(r.Context(), p); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, p.ID, claims.UserID, "create_permit", "compliance")
+	h.audit(r, p.ID, claims.UserID.String(), "create_permit", "compliance")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:p})
 }
 
@@ -105,7 +105,7 @@ func (h *ComplianceHandler) createCrossing(w http.ResponseWriter, r *http.Reques
 		BorderPost:req.BorderPost, CargoDesc:req.CargoDesc, GrossWeightKg:req.GrossWeightKg, CrossedAt:now,
 		ExitPermitNo:req.ExitPermitNo, EntryPermitNo:req.EntryPermitNo, Notes:req.Notes, CreatedAt:now}
 	if err := h.s.CreateBorderCrossing(r.Context(), b); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, b.ID, claims.UserID, "create_border_crossing", "compliance")
+	h.audit(r, b.ID, claims.UserID.String(), "create_border_crossing", "compliance")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:b})
 }
 
@@ -131,7 +131,7 @@ func (h *ComplianceHandler) createWeightCheck(w http.ResponseWriter, r *http.Req
 		GrossWeightKg:req.GrossWeightKg, LegalLimitKg:req.LegalLimitKg, IsCompliant:isCompliant,
 		FineAmount:req.FineAmount, Currency:req.Currency, CheckedAt:now, Notes:req.Notes, CreatedAt:now}
 	if err := h.s.CreateWeightCheck(r.Context(), wc); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, vid, claims.UserID, "weight_check", "compliance")
+	h.audit(r, vid, claims.UserID.String(), "weight_check", "compliance")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:wc})
 }
 

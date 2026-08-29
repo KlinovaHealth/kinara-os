@@ -66,7 +66,7 @@ func (h *TFHandler) CreateLC(w http.ResponseWriter, r *http.Request) {
 	}
 	expiry, err := time.Parse(time.RFC3339, req.ExpiryDate)
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid expiry_date"); return }
-	applicantID, _ := uuid.Parse(claims.UserID)
+	applicantID := claims.UserID
 	now := time.Now().UTC()
 	id := uuid.New()
 	lcNo := "LC-" + strings.ToUpper(id.String()[:10])
@@ -89,7 +89,7 @@ func (h *TFHandler) CreateLC(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create LC")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_lc", EntityType: "letter_of_credit", EntityID: lc.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_lc", EntityType: "letter_of_credit", EntityID: lc.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, lc)
 }
 
@@ -128,7 +128,7 @@ func (h *TFHandler) UpdateLCStatus(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to update LC status")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "update_lc_status:" + req.Status, EntityType: "letter_of_credit", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "update_lc_status:" + req.Status, EntityType: "letter_of_credit", EntityID: id, CreatedAt: now})
 	lc, _ := h.store.GetLC(r.Context(), id)
 	respond(w, http.StatusOK, lc)
 }
@@ -144,7 +144,7 @@ func (h *TFHandler) CreateFinancing(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusBadRequest, "requested_amount required")
 		return
 	}
-	applicantID, _ := uuid.Parse(claims.UserID)
+	applicantID := claims.UserID
 	currency := req.Currency
 	if currency == "" { currency = "USD" }
 	interestRate := req.InterestRatePct
@@ -168,7 +168,7 @@ func (h *TFHandler) CreateFinancing(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create financing request")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "create_financing", EntityType: "financing_request", EntityID: f.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "create_financing", EntityType: "financing_request", EntityID: f.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, f)
 }
 
@@ -189,7 +189,7 @@ func (h *TFHandler) ApproveFinancing(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to approve")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "approve_financing", EntityType: "financing_request", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "approve_financing", EntityType: "financing_request", EntityID: id, CreatedAt: now})
 	f, _ := h.store.GetFinancing(r.Context(), id)
 	respond(w, http.StatusOK, f)
 }
@@ -203,7 +203,7 @@ func (h *TFHandler) DisburseFinancing(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to disburse")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID, Action: "disburse_financing", EntityType: "financing_request", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.TradeFinanceAuditLog{ID: uuid.New(), ActorID: claims.UserID.String(), Action: "disburse_financing", EntityType: "financing_request", EntityID: id, CreatedAt: now})
 	f, _ := h.store.GetFinancing(r.Context(), id)
 	respond(w, http.StatusOK, f)
 }

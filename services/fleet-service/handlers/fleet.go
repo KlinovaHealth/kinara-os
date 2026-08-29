@@ -56,7 +56,7 @@ func (h *FleetHandler) create(w http.ResponseWriter, r *http.Request) {
 		Status:models.VehicleAvailable, Country:req.Country, BaseLocation:req.BaseLocation,
 		Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreateVehicle(r.Context(), v); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, v.ID, claims.UserID, "create_vehicle", "vehicle")
+	h.audit(r, v.ID, claims.UserID.String(), "create_vehicle", "vehicle")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:v})
 }
 
@@ -86,7 +86,7 @@ func (h *FleetHandler) update(w http.ResponseWriter, r *http.Request) {
 	var req models.UpdateVehicleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { writeError(w,400,"BAD_REQUEST","invalid JSON"); return }
 	if err := h.s.UpdateVehicle(r.Context(), id, req, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "update_vehicle", "vehicle")
+	h.audit(r, id, claims.UserID.String(), "update_vehicle", "vehicle")
 	v,_ := h.s.GetVehicle(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:v})
 }

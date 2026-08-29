@@ -55,7 +55,7 @@ func (h *LastMileHandler) create(w http.ResponseWriter, r *http.Request) {
 		DeliveryLat:req.DeliveryLat, DeliveryLng:req.DeliveryLng, Status:models.DeliveryPending,
 		WindowStart:winStart, WindowEnd:winEnd, AttemptCount:0, SMSNotified:false, Country:req.Country, Notes:req.Notes, CreatedAt:now, UpdatedAt:now}
 	if err := h.s.CreateDelivery(r.Context(), d); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, d.ID, claims.UserID, "create_delivery", "last_mile")
+	h.audit(r, d.ID, claims.UserID.String(), "create_delivery", "last_mile")
 	writeJSON(w,201,models.APIResponse{Success:true, Data:d})
 }
 
@@ -86,7 +86,7 @@ func (h *LastMileHandler) assignDriver(w http.ResponseWriter, r *http.Request) {
 	did,err := uuid.Parse(req.DriverID)
 	if err != nil { writeError(w,400,"INVALID_ID","invalid driver_id"); return }
 	if err := h.s.AssignDriver(r.Context(), id, did, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "assign_driver", "last_mile")
+	h.audit(r, id, claims.UserID.String(), "assign_driver", "last_mile")
 	d,_ := h.s.GetDelivery(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:d})
 }
@@ -99,7 +99,7 @@ func (h *LastMileHandler) recordDelivered(w http.ResponseWriter, r *http.Request
 	var req models.RecordDeliveryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { writeError(w,400,"BAD_REQUEST","invalid JSON"); return }
 	if err := h.s.RecordDelivered(r.Context(), id, req.ProofPhotoURL, req.SignatureURL, req.Notes, time.Now().UTC()); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "record_delivered", "last_mile")
+	h.audit(r, id, claims.UserID.String(), "record_delivered", "last_mile")
 	d,_ := h.s.GetDelivery(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:d})
 }
@@ -115,7 +115,7 @@ func (h *LastMileHandler) recordFailed(w http.ResponseWriter, r *http.Request) {
 	var nextAt *time.Time
 	if req.NextAttemptAt!="" { if t,err:=time.Parse(time.RFC3339,req.NextAttemptAt); err==nil { tUTC:=t.UTC(); nextAt=&tUTC } }
 	if err := h.s.RecordFailure(r.Context(), id, req.FailureReason, nextAt, req.Notes, now); err != nil { writeError(w,500,"DB_ERROR",err.Error()); return }
-	h.audit(r, id, claims.UserID, "record_failed:"+string(req.FailureReason), "last_mile")
+	h.audit(r, id, claims.UserID.String(), "record_failed:"+string(req.FailureReason), "last_mile")
 	d,_ := h.s.GetDelivery(r.Context(), id)
 	writeJSON(w,200,models.APIResponse{Success:true, Data:d})
 }

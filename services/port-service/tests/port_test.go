@@ -119,7 +119,7 @@ func setup(t *testing.T) (*httptest.Server, *memStore) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			claims := &auth.Claims{UserID: uuid.New().String(), Role: "port_admin"}
+			claims := &auth.Claims{UserID: uuid.New(), Role: "port_admin"}
 			next.ServeHTTP(w, req.WithContext(middleware.SetClaims(req.Context(), claims)))
 		})
 	})

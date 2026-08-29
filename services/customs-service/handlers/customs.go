@@ -73,7 +73,7 @@ func (h *CustomsHandler) CreateTariff(w http.ResponseWriter, r *http.Request) {
 		respondErr(w, http.StatusInternalServerError, "failed to create tariff")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CustomsAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID, Action: "create_tariff", EntityType: "tariff_code", EntityID: t.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CustomsAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID.String(), Action: "create_tariff", EntityType: "tariff_code", EntityID: t.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, t)
 }
 
@@ -140,7 +140,7 @@ func (h *CustomsHandler) CreateClearance(w http.ResponseWriter, r *http.Request)
 		respondErr(w, http.StatusInternalServerError, "failed to create clearance")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CustomsAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID, Action: "create_clearance", EntityType: "clearance_request", EntityID: c.ID, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CustomsAuditLog{ID: uuid.New(), PortID: portID, ActorID: claims.UserID.String(), Action: "create_clearance", EntityType: "clearance_request", EntityID: c.ID, CreatedAt: now})
 	respond(w, http.StatusCreated, c)
 }
 
@@ -177,11 +177,11 @@ func (h *CustomsHandler) UpdateClearanceStatus(w http.ResponseWriter, r *http.Re
 	now := time.Now().UTC()
 	c, err := h.store.GetClearance(r.Context(), id)
 	if err != nil { respondErr(w, http.StatusNotFound, "clearance not found"); return }
-	if err := h.store.UpdateClearanceStatus(r.Context(), id, models.ClearanceStatus(req.Status), claims.UserID, req.RejectionReason, now); err != nil {
+	if err := h.store.UpdateClearanceStatus(r.Context(), id, models.ClearanceStatus(req.Status), claims.UserID.String(), req.RejectionReason, now); err != nil {
 		respondErr(w, http.StatusInternalServerError, "failed to update status")
 		return
 	}
-	h.store.InsertAuditLog(r.Context(), models.CustomsAuditLog{ID: uuid.New(), PortID: c.PortID, ActorID: claims.UserID, Action: "update_clearance_status:" + req.Status, EntityType: "clearance_request", EntityID: id, CreatedAt: now})
+	h.store.InsertAuditLog(r.Context(), models.CustomsAuditLog{ID: uuid.New(), PortID: c.PortID, ActorID: claims.UserID.String(), Action: "update_clearance_status:" + req.Status, EntityType: "clearance_request", EntityID: id, CreatedAt: now})
 	updated, _ := h.store.GetClearance(r.Context(), id)
 	respond(w, http.StatusOK, updated)
 }
