@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cargo-maritime-service
+  namespace: kinara
+  labels:
+    app: cargo-maritime-service
+    pillar: maritime
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cargo-maritime-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: cargo-maritime-service
+        pillar: maritime
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: cargo-maritime-service
+        image: registry.digitalocean.com/kinara/cargo-maritime-service:latest
+        ports:
+        - containerPort: 8101
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: cargo-maritime-service-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: cargo-maritime-service-secrets
+              key: redis-url
+        - name: JWT_PUBLIC_KEY_PATH
+          value: /etc/kinara/jwt/public.pem
+        - name: TLS_CERT_FILE
+          value: /etc/kinara/tls/tls.crt
+        - name: TLS_KEY_FILE
+          value: /etc/kinara/tls/tls.key
+        - name: TLS_CA_FILE
+          value: /etc/kinara/tls/ca.crt
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8101
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8101
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cargo-maritime-service-hpa
+  namespace: kinara
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cargo-maritime-service
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cargo-maritime-service-pdb
+  namespace: kinara
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: cargo-maritime-service
