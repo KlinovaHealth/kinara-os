@@ -1,0 +1,181 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pharmacy-service
+  namespace: kinara-staging
+  labels:
+    app: pharmacy-service
+    version: "1.0.0"
+    part-of: kinara-os
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pharmacy-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: pharmacy-service
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: pharmacy-service-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: pharmacy-service
+          image: registry.digitalocean.com/kinara-os/pharmacy-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: https
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pharmacy-service-secrets
+                  key: database-url
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pharmacy-service-secrets
+                  key: encryption-key
+            - name: REDIS_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: pharmacy-service-secrets
+                  key: redis-addr
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pharmacy-service-secrets
+                  key: redis-password
+            - name: JWT_PUBLIC_KEY_PATH
+              value: /app/certs/jwt-public.pem
+            - name: TLS_CERT_PATH
+              value: /app/certs/tls.crt
+            - name: TLS_KEY_PATH
+              value: /app/certs/tls.key
+            - name: CA_CERT_PATH
+              value: /app/certs/ca.crt
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /app/certs
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: pharmacy-service-tls
+      imagePullSecrets:
+        - name: do-registry-secret
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pharmacy-service
+  namespace: kinara-staging
+  labels:
+    app: pharmacy-service
+spec:
+  selector:
+    app: pharmacy-service
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pharmacy-service-sa
+  namespace: kinara-staging
+  labels:
+    app: pharmacy-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pharmacy-service-pdb
+  namespace: kinara-staging
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pharmacy-service
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pharmacy-service-hpa
+  namespace: kinara-staging
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pharmacy-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
