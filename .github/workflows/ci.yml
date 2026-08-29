@@ -1,0 +1,170 @@
+name: Kinara OS CI
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: registry.digitalocean.com/kinara
+  GO_VERSION: "1.21"
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - analytics-service
+          - cargo-maritime-service
+          - cargo-service
+          - clinical-service
+          - compliance-service
+          - cooperative-service
+          - customs-service
+          - dock-service
+          - documentation-service
+          - driver-service
+          - farmer-service
+          - fleet-service
+          - governance-service
+          - last-mile-service
+          - logistics-analytics-service
+          - market-service
+          - notification-service
+          - patient-service
+          - payment-service
+          - pharmacy-service
+          - port-service
+          - referral-service
+          - route-service
+          - shipment-service
+          - shipping-service
+          - sms-gateway
+          - trade-finance-service
+          - transport-service
+          - vessel-service
+          - warehouse-service
+          - weather-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Test ${{ matrix.service }}
+        run: |
+          cd services/${{ matrix.service }}
+          go test ./... -v -timeout 60s -race
+        continue-on-error: false
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: kinara
+          POSTGRES_DB: kinara
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Start services via Docker Compose
+        run: |
+          cp infrastructure/docker/.env.example infrastructure/docker/.env
+          sed -i 's/change_me_in_production/testpass/g' infrastructure/docker/.env
+          sed -i 's/change_me_32_byte_hex_key_here_00/abcdef1234567890abcdef1234567890/g' infrastructure/docker/.env
+          docker compose -f infrastructure/docker/docker-compose.yml up -d \
+            farmer-service market-service payment-service patient-service sms-gateway
+        env:
+          POSTGRES_PASSWORD: testpass
+      - name: Wait for services
+        run: |
+          sleep 15
+          curl -f http://localhost:8084/health || echo "farmer-service not ready"
+          curl -f http://localhost:8086/health || echo "market-service not ready"
+          curl -f http://localhost:8107/health || echo "payment-service not ready"
+      - name: Run integration tests
+        run: |
+          cd tests/integration
+          go test ./... -v -timeout 120s
+        env:
+          KINARA_API_URL: http://localhost
+          FARMER_URL: http://localhost:8084
+          MARKET_URL: http://localhost:8086
+          PAYMENT_URL: http://localhost:8107
+          PATIENT_URL: http://localhost:8081
+
+  build-images:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Log in to registry
+        run: doctl registry login --expiry-seconds 1200
+      - name: Build and push all service images
+        run: |
+          for svc in services/*/; do
+            name=$(basename $svc)
+            if [ -f "$svc/Dockerfile" ]; then
+              echo "Building $name..."
+              docker build -t $REGISTRY/$name:${{ github.sha }} -t $REGISTRY/$name:latest $svc
+              docker push $REGISTRY/$name:${{ github.sha }}
+              docker push $REGISTRY/$name:latest
+            fi
+          done
+
+  deploy-togo:
+    name: Deploy to Togo Production
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/main'
+    environment: togo-prod
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Configure kubectl
+        run: doctl kubernetes cluster kubeconfig save kinara-togo-prod
+      - name: Deploy via Helm
+        run: |
+          helm upgrade --install kinara-togo \
+            infrastructure/helm/kinara-os \
+            -f infrastructure/helm/kinara-os/values.yaml \
+            -f infrastructure/helm/kinara-os/values-togo-prod.yaml \
+            --namespace kinara-togo \
+            --create-namespace \
+            --set global.imageTag=${{ github.sha }} \
+            --timeout 10m \
+            --wait
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/farmer-service -n kinara-togo --timeout=5m
+          kubectl rollout status deployment/market-service -n kinara-togo --timeout=5m
+          kubectl rollout status deployment/payment-service -n kinara-togo --timeout=5m

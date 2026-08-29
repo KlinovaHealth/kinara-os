@@ -1,0 +1,553 @@
+http:
+  middlewares:
+    jwt-auth:
+      forwardAuth:
+        address: "http://auth-service:8080/api/v1/validate"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Role"
+          - "X-Tenant-ID"
+        trustForwardHeader: true
+
+    rate-limit-default:
+      rateLimit:
+        average: 200
+        burst: 50
+        period: 1m
+        sourceCriterion:
+          requestHeaderName: "X-Tenant-ID"
+
+    rate-limit-payment:
+      rateLimit:
+        average: 100
+        burst: 20
+        period: 1m
+        sourceCriterion:
+          requestHeaderName: "X-Tenant-ID"
+
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+          - X-Tenant-ID
+        accessControlAllowOriginList:
+          - "https://admin.kinaraos.com"
+          - "https://app.kinaraos.com"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    compress:
+      compress: {}
+
+    secure-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+
+    audit-log:
+      plugin:
+        # Logs requests to audit-service via middleware
+        # In production: use a custom Traefik plugin or sidecar
+        headers:
+          customRequestHeaders:
+            X-Kinara-Trace: ""
+
+  routers:
+    # === AUTH ===
+    auth:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/auth`)"
+      service: auth-service
+      entryPoints: [websecure]
+      middlewares: [cors, compress, secure-headers]
+
+    # === HEALTH (no auth — gateway health check) ===
+    health:
+      rule: "Host(`api.kinaraos.com`) && Path(`/health`)"
+      service: gateway-health
+      entryPoints: [websecure]
+
+    # === PILLAR: HEALTH ===
+    patient:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/patients`)"
+      service: patient-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    clinical:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/clinical`)"
+      service: clinical-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    appointment:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/appointments`)"
+      service: appointment-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    lab:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/lab`)"
+      service: lab-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    pharmacy:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/pharmacy`)"
+      service: pharmacy-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    referral:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/referrals`)"
+      service: referral-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    immunization:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/immunizations`)"
+      service: immunization-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    outbreak:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/outbreaks`)"
+      service: outbreak-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    # === PILLAR: AGRICULTURE ===
+    farmer:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/farmers`)"
+      service: farmer-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    market:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/market`)"
+      service: market-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    cooperative:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/cooperatives`)"
+      service: cooperative-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    weather:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/weather`)"
+      service: weather-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    livestock:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/livestock`)"
+      service: livestock-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    irrigation:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/irrigation`)"
+      service: irrigation-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    input:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/inputs`)"
+      service: input-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    # === PILLAR: LOGISTICS ===
+    fleet:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/fleet`)"
+      service: fleet-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    driver:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/drivers`)"
+      service: driver-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    cargo:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/cargo`)"
+      service: cargo-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    route:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/routes`)"
+      service: route-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    transport:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/transport`)"
+      service: transport-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    last-mile:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/last-mile`)"
+      service: last-mile-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    shipment:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/shipments`)"
+      service: shipment-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    compliance:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/compliance`)"
+      service: compliance-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    logistics-analytics:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/logistics-analytics`)"
+      service: logistics-analytics-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    warehouse:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/warehouse`)"
+      service: warehouse-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    # === PILLAR: MARITIME ===
+    port:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/ports`)"
+      service: port-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    vessel:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/vessels`)"
+      service: vessel-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    dock:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/dock`)"
+      service: dock-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    cargo-maritime:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/cargo-maritime`)"
+      service: cargo-maritime-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    customs:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/customs`)"
+      service: customs-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    shipping:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/shipping`)"
+      service: shipping-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    trade-finance:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/trade-finance`)"
+      service: trade-finance-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    crew:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/crew`)"
+      service: crew-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    voyage:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/voyages`)"
+      service: voyage-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    # === CROSS-PILLAR ===
+    payment:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/payments`)"
+      service: payment-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-payment, cors, compress, secure-headers]
+
+    documentation:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/documents`)"
+      service: documentation-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    analytics:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/analytics`)"
+      service: analytics-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    notification:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/notifications`)"
+      service: notification-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    governance:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/api/v1/governance`)"
+      service: governance-service
+      entryPoints: [websecure]
+      middlewares: [jwt-auth, rate-limit-default, cors, compress]
+
+    # === SMS ===
+    sms:
+      rule: "Host(`api.kinaraos.com`) && PathPrefix(`/webhook/sms`)"
+      service: sms-gateway
+      entryPoints: [websecure]
+      middlewares: [cors, compress]
+
+    # === ADMIN DASHBOARD ===
+    admin:
+      rule: "Host(`admin.kinaraos.com`)"
+      service: admin-dashboard
+      entryPoints: [websecure]
+      middlewares: [cors, compress, secure-headers]
+
+  services:
+    gateway-health:
+      loadBalancer:
+        servers:
+          - url: "http://traefik:8888"
+
+    auth-service:
+      loadBalancer:
+        healthCheck:
+          path: /health
+          interval: 10s
+          timeout: 3s
+        servers:
+          - url: "http://auth-service:8080"
+
+    patient-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://patient-service:8081" }]
+
+    clinical-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://clinical-service:8082" }]
+
+    governance-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://governance-service:8083" }]
+
+    farmer-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://farmer-service:8084" }]
+
+    notification-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://notification-service:8085" }]
+
+    market-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://market-service:8086" }]
+
+    cooperative-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://cooperative-service:8087" }]
+
+    weather-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://weather-service:8088" }]
+
+    fleet-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://fleet-service:8089" }]
+
+    driver-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://driver-service:8090" }]
+
+    cargo-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://cargo-service:8091" }]
+
+    route-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://route-service:8092" }]
+
+    transport-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://transport-service:8093" }]
+
+    last-mile-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://last-mile-service:8094" }]
+
+    shipment-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://shipment-service:8095" }]
+
+    compliance-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://compliance-service:8096" }]
+
+    logistics-analytics-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://logistics-analytics-service:8097" }]
+
+    port-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://port-service:8098" }]
+
+    vessel-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://vessel-service:8099" }]
+
+    dock-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://dock-service:8100" }]
+
+    cargo-maritime-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://cargo-maritime-service:8101" }]
+
+    customs-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://customs-service:8102" }]
+
+    shipping-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://shipping-service:8103" }]
+
+    warehouse-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://warehouse-service:8104" }]
+
+    trade-finance-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://trade-finance-service:8105" }]
+
+    documentation-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://documentation-service:8106" }]
+
+    payment-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://payment-service:8107" }]
+
+    analytics-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://analytics-service:8108" }]
+
+    appointment-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://appointment-service:8109" }]
+
+    crew-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://crew-service:8110" }]
+
+    immunization-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://immunization-service:8111" }]
+
+    input-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://input-service:8112" }]
+
+    irrigation-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://irrigation-service:8113" }]
+
+    lab-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://lab-service:8114" }]
+
+    livestock-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://livestock-service:8115" }]
+
+    outbreak-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://outbreak-service:8116" }]
+
+    pharmacy-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://pharmacy-service:8117" }]
+
+    referral-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://referral-service:8118" }]
+
+    voyage-service:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://voyage-service:8119" }]
+
+    sms-gateway:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://sms-gateway:8200" }]
+
+    admin-dashboard:
+      loadBalancer:
+        healthCheck: { path: /health, interval: 10s, timeout: 3s }
+        servers: [{ url: "http://admin-dashboard:3000" }]

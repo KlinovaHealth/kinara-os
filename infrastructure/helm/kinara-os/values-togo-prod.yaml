@@ -1,0 +1,17 @@
+global:
+  imageRegistry: registry.digitalocean.com/kinara
+  imagePullPolicy: Always
+  namespace: kinara-togo
+
+# Togo production: 2 replicas minimum for all services
+# Payment gets 3 for HA
+services:
+  payment:
+    port: 8107
+    replicas: 3
+    maxReplicas: 30
+    db: kinara_payment
+
+monitoring:
+  grafana:
+    adminPassword: "${GRAFANA_TOGO_PASSWORD}"

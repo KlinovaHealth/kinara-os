@@ -1,0 +1,77 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: kinara-togo-prod
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+
+scrape_configs:
+  - job_name: traefik
+    static_configs:
+      - targets: [traefik:8888]
+
+  - job_name: kinara-services
+    static_configs:
+      - targets:
+          - auth-service:8080
+          - patient-service:8081
+          - clinical-service:8082
+          - governance-service:8083
+          - farmer-service:8084
+          - notification-service:8085
+          - market-service:8086
+          - cooperative-service:8087
+          - weather-service:8088
+          - fleet-service:8089
+          - driver-service:8090
+          - cargo-service:8091
+          - route-service:8092
+          - transport-service:8093
+          - last-mile-service:8094
+          - shipment-service:8095
+          - compliance-service:8096
+          - logistics-analytics-service:8097
+          - port-service:8098
+          - vessel-service:8099
+          - dock-service:8100
+          - cargo-maritime-service:8101
+          - customs-service:8102
+          - shipping-service:8103
+          - warehouse-service:8104
+          - trade-finance-service:8105
+          - documentation-service:8106
+          - payment-service:8107
+          - analytics-service:8108
+          - appointment-service:8109
+          - crew-service:8110
+          - immunization-service:8111
+          - input-service:8112
+          - irrigation-service:8113
+          - lab-service:8114
+          - livestock-service:8115
+          - outbreak-service:8116
+          - pharmacy-service:8117
+          - referral-service:8118
+          - voyage-service:8119
+          - sms-gateway:8200
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '([^:]+):.*'
+        target_label: service
+        replacement: '$1'
+
+  - job_name: postgres
+    static_configs:
+      - targets: [postgres-exporter:9187]
+
+  - job_name: redis
+    static_configs:
+      - targets: [redis-exporter:9121]

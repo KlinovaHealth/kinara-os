@@ -1,0 +1,16 @@
+apiVersion: v2
+name: kinara-os
+description: Kinara Governance OS — 40 microservices for African coordination
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - africa
+  - agriculture
+  - health
+  - logistics
+  - maritime
+home: https://kinaraos.com
+maintainers:
+  - name: KlinovaHealth
+    email: infra@kinaraos.com

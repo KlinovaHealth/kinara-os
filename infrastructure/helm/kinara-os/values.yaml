@@ -1,0 +1,78 @@
+global:
+  imageRegistry: registry.digitalocean.com/kinara
+  imagePullPolicy: Always
+  namespace: kinara-os
+  jwtPublicKeyPath: /etc/jwt/public.pem
+
+traefik:
+  enabled: true
+  image: traefik:v3.1
+  replicas: 2
+
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  storageSize: 100Gi
+  storageClass: do-block-storage
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  maxmemory: 512mb
+
+services:
+  auth:           { port: 8080, replicas: 2, maxReplicas: 10, db: kinara_auth }
+  patient:        { port: 8081, replicas: 2, maxReplicas: 10, db: kinara_patient }
+  clinical:       { port: 8082, replicas: 2, maxReplicas: 10, db: kinara_clinical }
+  governance:     { port: 8083, replicas: 2, maxReplicas: 8,  db: kinara_governance }
+  farmer:         { port: 8084, replicas: 2, maxReplicas: 15, db: kinara_farmer }
+  notification:   { port: 8085, replicas: 2, maxReplicas: 10, db: kinara_notification }
+  market:         { port: 8086, replicas: 3, maxReplicas: 20, db: kinara_market }
+  cooperative:    { port: 8087, replicas: 2, maxReplicas: 10, db: kinara_cooperative }
+  weather:        { port: 8088, replicas: 2, maxReplicas: 8,  db: kinara_weather }
+  fleet:          { port: 8089, replicas: 2, maxReplicas: 15, db: kinara_fleet }
+  driver:         { port: 8090, replicas: 2, maxReplicas: 15, db: kinara_driver }
+  cargo:          { port: 8091, replicas: 2, maxReplicas: 15, db: kinara_cargo }
+  route:          { port: 8092, replicas: 2, maxReplicas: 10, db: kinara_route }
+  transport:      { port: 8093, replicas: 2, maxReplicas: 20, db: kinara_transport }
+  last-mile:      { port: 8094, replicas: 2, maxReplicas: 20, db: kinara_lastmile }
+  shipment:       { port: 8095, replicas: 2, maxReplicas: 20, db: kinara_shipment }
+  compliance:     { port: 8096, replicas: 2, maxReplicas: 10, db: kinara_compliance }
+  logistics-analytics: { port: 8097, replicas: 2, maxReplicas: 10, db: kinara_logistics_analytics }
+  port:           { port: 8098, replicas: 2, maxReplicas: 15, db: kinara_port }
+  vessel:         { port: 8099, replicas: 2, maxReplicas: 15, db: kinara_vessel }
+  dock:           { port: 8100, replicas: 2, maxReplicas: 15, db: kinara_dock }
+  cargo-maritime: { port: 8101, replicas: 2, maxReplicas: 20, db: kinara_cargo_maritime }
+  customs:        { port: 8102, replicas: 2, maxReplicas: 10, db: kinara_customs }
+  shipping:       { port: 8103, replicas: 2, maxReplicas: 15, db: kinara_shipping }
+  warehouse:      { port: 8104, replicas: 2, maxReplicas: 15, db: kinara_warehouse }
+  trade-finance:  { port: 8105, replicas: 2, maxReplicas: 10, db: kinara_trade_finance }
+  documentation:  { port: 8106, replicas: 2, maxReplicas: 10, db: kinara_documentation }
+  payment:        { port: 8107, replicas: 3, maxReplicas: 30, db: kinara_payment }
+  analytics:      { port: 8108, replicas: 2, maxReplicas: 20, db: kinara_analytics }
+  appointment:    { port: 8109, replicas: 2, maxReplicas: 10, db: kinara_appointment }
+  crew:           { port: 8110, replicas: 2, maxReplicas: 10, db: kinara_crew }
+  immunization:   { port: 8111, replicas: 2, maxReplicas: 10, db: kinara_immunization }
+  input:          { port: 8112, replicas: 2, maxReplicas: 10, db: kinara_input }
+  irrigation:     { port: 8113, replicas: 2, maxReplicas: 10, db: kinara_irrigation }
+  lab:            { port: 8114, replicas: 2, maxReplicas: 10, db: kinara_lab }
+  livestock:      { port: 8115, replicas: 2, maxReplicas: 10, db: kinara_livestock }
+  outbreak:       { port: 8116, replicas: 2, maxReplicas: 10, db: kinara_outbreak }
+  pharmacy:       { port: 8117, replicas: 2, maxReplicas: 10, db: kinara_pharmacy }
+  referral:       { port: 8118, replicas: 2, maxReplicas: 10, db: kinara_referral }
+  voyage:         { port: 8119, replicas: 2, maxReplicas: 10, db: kinara_voyage }
+  sms-gateway:    { port: 8200, replicas: 2, maxReplicas: 10, db: kinara_sms }
+
+monitoring:
+  prometheus:
+    enabled: true
+    storageSize: 50Gi
+    retention: 30d
+  grafana:
+    enabled: true
+    adminPassword: kinara2026
+  alertmanager:
+    enabled: true
+  elk:
+    enabled: true
+    elasticsearchMemory: 2Gi

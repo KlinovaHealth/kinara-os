@@ -1,0 +1,76 @@
+{
+  "title": "Kinara OS — System Health",
+  "uid": "kinara-system",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "panels": [
+    {
+      "title": "Services Up",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "count(up{job=\"kinara-services\"} == 1)",
+        "legendFormat": "Up"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"steps": [{"value": 0, "color": "red"}, {"value": 35, "color": "yellow"}, {"value": 40, "color": "green"}]}
+        }
+      }
+    },
+    {
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0},
+      "targets": [{
+        "expr": "sum(rate(traefik_service_requests_total[1m])) by (service)",
+        "legendFormat": "{{ service }}"
+      }]
+    },
+    {
+      "title": "Error Rate %",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [{
+        "expr": "100 * rate(traefik_service_requests_total{code=~\"5..\"}[5m]) / rate(traefik_service_requests_total[5m])",
+        "legendFormat": "{{ service }}"
+      }]
+    },
+    {
+      "title": "P95 Latency",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket[5m])) by (le, service))",
+        "legendFormat": "{{ service }}"
+      }]
+    },
+    {
+      "title": "SMS Commands (24h)",
+      "type": "piechart",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 16},
+      "targets": [{
+        "expr": "increase(kinara_sms_commands_total[24h])",
+        "legendFormat": "{{ command }}"
+      }]
+    },
+    {
+      "title": "Daily Transactions",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
+      "targets": [{
+        "expr": "increase(kinara_payment_attempts_total[24h])",
+        "legendFormat": "Transactions"
+      }]
+    },
+    {
+      "title": "Active Farmers (Togo)",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16},
+      "targets": [{
+        "expr": "kinara_active_farmers_total{country=\"TG\"}",
+        "legendFormat": "Farmers"
+      }]
+    }
+  ]
+}

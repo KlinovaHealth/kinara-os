@@ -1,0 +1,555 @@
+version: "3.9"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks:
+    - kinara-network
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-service-env: &service-env
+  JWT_PUBLIC_KEY_PATH: /etc/jwt/public.pem
+  REDIS_URL: redis://redis:6379
+  AES_KEY: ${AES_KEY}
+  TLS_CERT_FILE: ""
+  TLS_KEY_FILE: ""
+
+networks:
+  kinara-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  traefik-certs:
+  prometheus-data:
+  grafana-data:
+  elasticsearch-data:
+
+services:
+  # ── GATEWAY ──────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v3.1
+    <<: *service-defaults
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8888:8888"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ../traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
+      - traefik-certs:/certs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.kinaraos.com`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+  # ── INFRASTRUCTURE ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    <<: *service-defaults
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kinara}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: kinara
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../flyway/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kinara"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    <<: *service-defaults
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  flyway:
+    image: flyway/flyway:10
+    <<: *service-defaults
+    command: -url=jdbc:postgresql://postgres:5432/kinara -user=${POSTGRES_USER:-kinara} -password=${POSTGRES_PASSWORD} -connectRetries=10 migrate
+    volumes:
+      - ../flyway/migrations:/flyway/sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── HEALTH PILLAR ─────────────────────────────────────────────────────
+  auth-service:
+    build: ../../services/auth-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_auth?sslmode=disable
+      JWT_PRIVATE_KEY_PATH: /etc/jwt/private.pem
+      PORT: "8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  patient-service:
+    build: ../../services/patient-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_patient?sslmode=disable
+      PORT: "8081"
+    depends_on: [postgres, redis, auth-service]
+
+  clinical-service:
+    build: ../../services/clinical-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_clinical?sslmode=disable
+      PORT: "8082"
+    depends_on: [postgres, redis, auth-service]
+
+  governance-service:
+    build: ../../services/governance-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_governance?sslmode=disable
+      PORT: "8083"
+    depends_on: [postgres, redis, auth-service]
+
+  appointment-service:
+    build: ../../services/appointment-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_appointment?sslmode=disable
+      PORT: "8109"
+    depends_on: [postgres, redis, auth-service]
+
+  lab-service:
+    build: ../../services/lab-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_lab?sslmode=disable
+      PORT: "8114"
+    depends_on: [postgres, redis, auth-service]
+
+  pharmacy-service:
+    build: ../../services/pharmacy-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_pharmacy?sslmode=disable
+      PORT: "8117"
+    depends_on: [postgres, redis, auth-service]
+
+  referral-service:
+    build: ../../services/referral-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_referral?sslmode=disable
+      PORT: "8118"
+    depends_on: [postgres, redis, auth-service]
+
+  immunization-service:
+    build: ../../services/immunization-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_immunization?sslmode=disable
+      PORT: "8111"
+    depends_on: [postgres, redis, auth-service]
+
+  outbreak-service:
+    build: ../../services/outbreak-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_outbreak?sslmode=disable
+      PORT: "8116"
+    depends_on: [postgres, redis, auth-service]
+
+  # ── AGRICULTURE PILLAR ────────────────────────────────────────────────
+  farmer-service:
+    build: ../../services/farmer-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_farmer?sslmode=disable
+      PORT: "8084"
+    depends_on: [postgres, redis, auth-service]
+
+  market-service:
+    build: ../../services/market-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_market?sslmode=disable
+      PORT: "8086"
+    depends_on: [postgres, redis, auth-service]
+
+  cooperative-service:
+    build: ../../services/cooperative-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_cooperative?sslmode=disable
+      PORT: "8087"
+    depends_on: [postgres, redis, auth-service]
+
+  weather-service:
+    build: ../../services/weather-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_weather?sslmode=disable
+      PORT: "8088"
+    depends_on: [postgres, redis, auth-service]
+
+  livestock-service:
+    build: ../../services/livestock-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_livestock?sslmode=disable
+      PORT: "8115"
+    depends_on: [postgres, redis, auth-service]
+
+  irrigation-service:
+    build: ../../services/irrigation-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_irrigation?sslmode=disable
+      PORT: "8113"
+    depends_on: [postgres, redis, auth-service]
+
+  input-service:
+    build: ../../services/input-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_input?sslmode=disable
+      PORT: "8112"
+    depends_on: [postgres, redis, auth-service]
+
+  # ── LOGISTICS PILLAR ──────────────────────────────────────────────────
+  fleet-service:
+    build: ../../services/fleet-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_fleet?sslmode=disable
+      PORT: "8089"
+    depends_on: [postgres, redis, auth-service]
+
+  driver-service:
+    build: ../../services/driver-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_driver?sslmode=disable
+      PORT: "8090"
+    depends_on: [postgres, redis, auth-service]
+
+  cargo-service:
+    build: ../../services/cargo-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_cargo?sslmode=disable
+      PORT: "8091"
+    depends_on: [postgres, redis, auth-service]
+
+  route-service:
+    build: ../../services/route-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_route?sslmode=disable
+      PORT: "8092"
+    depends_on: [postgres, redis, auth-service]
+
+  transport-service:
+    build: ../../services/transport-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_transport?sslmode=disable
+      PORT: "8093"
+    depends_on: [postgres, redis, auth-service]
+
+  last-mile-service:
+    build: ../../services/last-mile-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_lastmile?sslmode=disable
+      PORT: "8094"
+    depends_on: [postgres, redis, auth-service]
+
+  shipment-service:
+    build: ../../services/shipment-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_shipment?sslmode=disable
+      PORT: "8095"
+    depends_on: [postgres, redis, auth-service]
+
+  compliance-service:
+    build: ../../services/compliance-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_compliance?sslmode=disable
+      PORT: "8096"
+    depends_on: [postgres, redis, auth-service]
+
+  logistics-analytics-service:
+    build: ../../services/logistics-analytics-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_logistics_analytics?sslmode=disable
+      PORT: "8097"
+    depends_on: [postgres, redis, auth-service]
+
+  warehouse-service:
+    build: ../../services/warehouse-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_warehouse?sslmode=disable
+      PORT: "8104"
+    depends_on: [postgres, redis, auth-service]
+
+  # ── MARITIME PILLAR ───────────────────────────────────────────────────
+  port-service:
+    build: ../../services/port-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_port?sslmode=disable
+      PORT: "8098"
+    depends_on: [postgres, redis, auth-service]
+
+  vessel-service:
+    build: ../../services/vessel-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_vessel?sslmode=disable
+      PORT: "8099"
+    depends_on: [postgres, redis, auth-service]
+
+  dock-service:
+    build: ../../services/dock-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_dock?sslmode=disable
+      PORT: "8100"
+    depends_on: [postgres, redis, auth-service]
+
+  cargo-maritime-service:
+    build: ../../services/cargo-maritime-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_cargo_maritime?sslmode=disable
+      PORT: "8101"
+    depends_on: [postgres, redis, auth-service]
+
+  customs-service:
+    build: ../../services/customs-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_customs?sslmode=disable
+      PORT: "8102"
+    depends_on: [postgres, redis, auth-service]
+
+  shipping-service:
+    build: ../../services/shipping-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_shipping?sslmode=disable
+      PORT: "8103"
+    depends_on: [postgres, redis, auth-service]
+
+  trade-finance-service:
+    build: ../../services/trade-finance-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_trade_finance?sslmode=disable
+      PORT: "8105"
+    depends_on: [postgres, redis, auth-service]
+
+  crew-service:
+    build: ../../services/crew-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_crew?sslmode=disable
+      PORT: "8110"
+    depends_on: [postgres, redis, auth-service]
+
+  voyage-service:
+    build: ../../services/voyage-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_voyage?sslmode=disable
+      PORT: "8119"
+    depends_on: [postgres, redis, auth-service]
+
+  # ── CROSS-PILLAR ──────────────────────────────────────────────────────
+  notification-service:
+    build: ../../services/notification-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_notification?sslmode=disable
+      PORT: "8085"
+    depends_on: [postgres, redis, auth-service]
+
+  payment-service:
+    build: ../../services/payment-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_payment?sslmode=disable
+      PORT: "8107"
+    depends_on: [postgres, redis, auth-service]
+
+  documentation-service:
+    build: ../../services/documentation-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_documentation?sslmode=disable
+      PORT: "8106"
+    depends_on: [postgres, redis, auth-service]
+
+  analytics-service:
+    build: ../../services/analytics-service
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_analytics?sslmode=disable
+      PORT: "8108"
+    depends_on: [postgres, redis, auth-service]
+
+  # ── SMS GATEWAY ───────────────────────────────────────────────────────
+  sms-gateway:
+    build: ../../services/sms-gateway
+    <<: *service-defaults
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_sms?sslmode=disable
+      PORT: "8200"
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      AFRICASTALKING_API_KEY: ${AFRICASTALKING_API_KEY}
+      AFRICASTALKING_USERNAME: ${AFRICASTALKING_USERNAME}
+      MARKET_SERVICE_URL: http://market-service:8086
+      WEATHER_SERVICE_URL: http://weather-service:8088
+      ANALYTICS_SERVICE_URL: http://analytics-service:8108
+      FARMER_SERVICE_URL: http://farmer-service:8084
+    depends_on: [postgres, redis, market-service, weather-service]
+
+  # ── ADMIN DASHBOARD ───────────────────────────────────────────────────
+  admin-dashboard:
+    build: ../../dashboard
+    <<: *service-defaults
+    environment:
+      VITE_API_BASE: https://api.kinaraos.com
+      VITE_WS_URL: wss://api.kinaraos.com/ws
+    ports:
+      - "3000:3000"
+
+  # ── MONITORING ────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    <<: *service-defaults
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    <<: *service-defaults
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-kinara2026}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://grafana.kinaraos.com
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    ports:
+      - "3001:3000"
+    depends_on: [prometheus]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    <<: *service-defaults
+    volumes:
+      - ../monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    ports:
+      - "9093:9093"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    <<: *service-defaults
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.0
+    <<: *service-defaults
+    volumes:
+      - ../monitoring/elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on: [elasticsearch]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    <<: *service-defaults
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    ports:
+      - "5601:5601"
+    depends_on: [elasticsearch]

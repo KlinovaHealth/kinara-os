@@ -1,0 +1,17 @@
+global:
+  imageRegistry: localhost:5000
+  imagePullPolicy: Never
+  namespace: kinara-dev
+
+# Dev: 1 replica per service to save resources
+services:
+  auth:           { port: 8080, replicas: 1, maxReplicas: 2, db: kinara_auth }
+  patient:        { port: 8081, replicas: 1, maxReplicas: 2, db: kinara_patient }
+  farmer:         { port: 8084, replicas: 1, maxReplicas: 2, db: kinara_farmer }
+  market:         { port: 8086, replicas: 1, maxReplicas: 2, db: kinara_market }
+  payment:        { port: 8107, replicas: 1, maxReplicas: 2, db: kinara_payment }
+  sms-gateway:    { port: 8200, replicas: 1, maxReplicas: 2, db: kinara_sms }
+
+monitoring:
+  elk:
+    enabled: false
