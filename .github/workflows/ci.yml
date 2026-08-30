@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: registry.digitalocean.com/kinara-registry
+  REGISTRY: ghcr.io/klinovahealth
   GO_VERSION: "1.21"
 
 jobs:
@@ -139,12 +139,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-      - name: Log in to registry
-        run: doctl registry login --expiry-seconds 1200
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push all service images
         run: |
           for svc in services/*/; do
