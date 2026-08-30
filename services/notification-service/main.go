@@ -62,9 +62,6 @@ func main() {
 		logger.Error("invalid DATABASE_URL", "error", err)
 		os.Exit(1)
 	}
-	poolCfg.MaxConns = 20
-	poolCfg.MinConns = 5
-
 	pool, err := pgxpool.NewWithConfig(context.Background(), poolCfg)
 	if err != nil {
 		logger.Error("failed to connect to database", "error", err)

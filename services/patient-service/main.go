@@ -54,10 +54,6 @@ func main() {
 		slog.Error("failed to parse database URL", "error", err)
 		os.Exit(1)
 	}
-	poolCfg.MaxConns = 25
-	poolCfg.MinConns = 5
-	poolCfg.MaxConnLifetime = 30 * time.Minute
-
 	pool, err := pgxpool.NewWithConfig(context.Background(), poolCfg)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)

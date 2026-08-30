@@ -70,7 +70,7 @@ spec:
                   name: kinara-db-credentials
                   key: pass
             - name: DATABASE_URL
-              value: "postgresql://$(_DB_USER):$(_DB_PASS)@$(_DB_HOST):$(_DB_PORT)/{{ $svc.db }}?sslmode=require"
+              value: "postgresql://$(_DB_USER):$(_DB_PASS)@$(_DB_HOST):$(_DB_PORT)/{{ $svc.db }}?sslmode=require&pool_max_conns=2&pool_min_conns=0"
             - name: JWT_PUBLIC_KEY_PATH
               value: {{ $.Values.global.jwtPublicKeyPath }}
             - name: REDIS_URL
@@ -80,6 +80,26 @@ spec:
                 secretKeyRef:
                   name: kinara-shared-secrets
                   key: encryption-key
+            # TLS env vars — services use different naming conventions
+            - name: TLS_CERT_PATH
+              value: /etc/kinara/tls/tls.crt
+            - name: TLS_KEY_PATH
+              value: /etc/kinara/tls/tls.key
+            - name: CA_CERT_PATH
+              value: /etc/kinara/tls/ca.crt
+            - name: TLS_CERT_FILE
+              value: /etc/kinara/tls/tls.crt
+            - name: TLS_KEY_FILE
+              value: /etc/kinara/tls/tls.key
+            - name: TLS_CA_FILE
+              value: /etc/kinara/tls/ca.crt
+            # JWT env var aliases — some services use JWT_PUBLIC_KEY, others JWT_PUBLIC_KEY_PATH
+            - name: JWT_PUBLIC_KEY
+              value: /etc/jwt/public.pem
+            {{- if eq $name "auth" }}
+            - name: JWT_PRIVATE_KEY_PATH
+              value: /etc/jwt-private/private.pem
+            {{- end }}
           resources:
             {{- if $.Values.defaultResources }}
             {{- toYaml $.Values.defaultResources | nindent 12 }}
@@ -98,15 +118,13 @@ spec:
               drop:
                 - ALL
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: {{ $svc.port }}
             initialDelaySeconds: 15
             periodSeconds: 20
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: {{ $svc.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -115,12 +133,28 @@ spec:
             - name: jwt-public-key
               mountPath: /etc/jwt
               readOnly: true
+            - name: tls-certs
+              mountPath: /etc/kinara/tls
+              readOnly: true
+            {{- if eq $name "auth" }}
+            - name: jwt-private-key
+              mountPath: /etc/jwt-private
+              readOnly: true
+            {{- end }}
             - name: tmp
               mountPath: /tmp
       volumes:
         - name: jwt-public-key
           secret:
             secretName: kinara-jwt-public-key
+        - name: tls-certs
+          secret:
+            secretName: kinara-tls-certs
+        {{- if eq $name "auth" }}
+        - name: jwt-private-key
+          secret:
+            secretName: kinara-jwt-private-key
+        {{- end }}
         - name: tmp
           emptyDir: {}
       terminationGracePeriodSeconds: 30
