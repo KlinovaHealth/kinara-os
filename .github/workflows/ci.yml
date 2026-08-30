@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: registry.digitalocean.com/kinara
+  REGISTRY: registry.digitalocean.com/kinara-registry
   GO_VERSION: "1.21"
 
 jobs:
