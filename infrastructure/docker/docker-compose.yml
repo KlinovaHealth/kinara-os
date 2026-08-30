@@ -473,8 +473,6 @@ services:
       <<: *service-env
       DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_sms?sslmode=disable
       PORT: "8200"
-    ports:
-      - "8200:8200"
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       AFRICASTALKING_API_KEY: ${AFRICASTALKING_API_KEY}
@@ -483,6 +481,8 @@ services:
       WEATHER_SERVICE_URL: http://weather-service:8088
       ANALYTICS_SERVICE_URL: http://analytics-service:8108
       FARMER_SERVICE_URL: http://farmer-service:8084
+    ports:
+      - "8200:8200"
     depends_on: [postgres, redis, market-service, weather-service]
 
   # ── ADMIN DASHBOARD ───────────────────────────────────────────────────
