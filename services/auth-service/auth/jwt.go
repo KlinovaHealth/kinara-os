@@ -11,17 +11,22 @@ import (
 )
 
 const (
-	accessTokenTTL  = 15 * time.Minute
-	refreshTokenTTL = 7 * 24 * time.Hour
+	accessTokenTTL       = 15 * time.Minute
+	deviceAccessTokenTTL = 5 * time.Minute
+	refreshTokenTTL      = 7 * 24 * time.Hour
 )
 
 // Claims is the JWT payload used across Kinara Governance OS.
+// Device sessions populate DeviceID, ClinicID, and Scope; human sessions leave them nil/empty.
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID   uuid.UUID `json:"uid"`
-	Username string    `json:"username"`
-	Role     string    `json:"role"`
-	Scopes   []string  `json:"scopes"`
+	UserID   uuid.UUID  `json:"uid"`
+	Username string     `json:"username"`
+	Role     string     `json:"role"`
+	Scopes   []string   `json:"scopes"`
+	DeviceID *uuid.UUID `json:"device_id,omitempty"`
+	ClinicID *uuid.UUID `json:"clinic_id,omitempty"`
+	Scope    string     `json:"scope,omitempty"` // e.g. "clinic:uuid"
 }
 
 // Issuer signs access tokens with an RSA private key (RS256).
@@ -113,7 +118,37 @@ func (c *Claims) HasScope(scope string) bool {
 	return false
 }
 
+// IssueDeviceAccessToken signs a short-lived JWT (5 min) scoped to a single clinic.
+// Device tokens have a "clinic:<clinic_id>" scope claim; all patient-data services
+// must validate this via RequireClinicScope middleware before serving any PHI.
+func (i *Issuer) IssueDeviceAccessToken(staffID, deviceID, clinicID uuid.UUID, role string) (string, error) {
+	now := time.Now()
+	clinicScope := "clinic:" + clinicID.String()
+	claims := &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    i.issuer,
+			Subject:   staffID.String(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(deviceAccessTokenTTL)),
+			ID:        uuid.New().String(),
+		},
+		UserID:   staffID,
+		Username: "",
+		Role:     role,
+		Scopes:   []string{clinicScope},
+		DeviceID: &deviceID,
+		ClinicID: &clinicID,
+		Scope:    clinicScope,
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(i.privateKey)
+}
+
 // AccessTokenTTLSeconds returns the access token lifetime in seconds.
 func AccessTokenTTLSeconds() int {
 	return int(accessTokenTTL.Seconds())
+}
+
+// DeviceAccessTokenTTLSeconds returns the device session token lifetime in seconds.
+func DeviceAccessTokenTTLSeconds() int {
+	return int(deviceAccessTokenTTL.Seconds())
 }
