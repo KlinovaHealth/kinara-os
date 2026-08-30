@@ -147,13 +147,23 @@ jobs:
         run: echo "${{ secrets.GH_PACKAGES_PAT }}" | docker login ghcr.io -u KlinovaHealth --password-stdin
       - name: Build and push all service images
         run: |
+          push_with_retry() {
+            local image=$1
+            for attempt in 1 2 3; do
+              docker push "$image" && return 0
+              echo "Push attempt $attempt failed for $image, retrying in 10s..."
+              sleep 10
+            done
+            echo "All push attempts failed for $image"
+            return 1
+          }
           for svc in services/*/; do
             name=$(basename $svc)
             if [ -f "$svc/Dockerfile" ]; then
               echo "Building $name..."
               docker build -t $REGISTRY/$name:${{ github.sha }} -t $REGISTRY/$name:latest $svc
-              docker push $REGISTRY/$name:${{ github.sha }}
-              docker push $REGISTRY/$name:latest
+              push_with_retry $REGISTRY/$name:${{ github.sha }}
+              push_with_retry $REGISTRY/$name:latest
             fi
           done
 
