@@ -20,6 +20,7 @@ vendor/
 .env.*
 !.env.example
 *.pem
+*-private.pem
 *.key
 !*.key.example
 certs/
@@ -37,4 +38,3 @@ Thumbs.db
 # Go workspace
 go.work
 go.work.sum
-staging-jwt-private.pem
