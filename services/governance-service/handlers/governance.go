@@ -220,7 +220,7 @@ func (h *Handler) reviewComplianceReport(w http.ResponseWriter, r *http.Request)
 	row, err := h.queries.ReviewComplianceReport(r.Context(), db.ReviewComplianceReportParams{
 		ID:                id,
 		Status:            req.Status,
-		ReviewedBy:        &claims.UserID,
+		ReviewedBy:        claims.UserID,
 		ViolationNotesEnc: notesEnc,
 	})
 	if err != nil {

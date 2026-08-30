@@ -114,7 +114,7 @@ func (h *MarketHandler) createListing(w http.ResponseWriter, r *http.Request) {
 		Currency:       req.Currency,
 		PriceUnit:      req.PriceUnit,
 		QualityGrade:   req.QualityGrade,
-		Country:        claims.FacilityID,
+		Country:        req.Country,
 		Region:         req.Region,
 		Market:         req.Market,
 		HarvestedAt:    harvestedAt,
