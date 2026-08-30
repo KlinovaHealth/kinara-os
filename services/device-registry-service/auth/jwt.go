@@ -57,3 +57,12 @@ func (v *Validator) IsAllowedRole(claims *Claims, allowed ...string) bool {
 	}
 	return false
 }
+
+func (c *Claims) IsAllowedRole(allowed ...string) bool {
+	for _, r := range allowed {
+		if c.Role == r {
+			return true
+		}
+	}
+	return false
+}
