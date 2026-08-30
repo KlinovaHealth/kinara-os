@@ -684,7 +684,7 @@ func (h *Handler) handleAppt(ctx context.Context, cmd models.ParsedCommand, from
 
 func (h *Handler) handleLab(ctx context.Context, cmd models.ParsedCommand, from string) string {
 	if len(cmd.Args) < 2 {
-		return "KINARA LABO:\nLAB <ID-patient> <test>\nEx: LAB PAT-A1B2 MALARIA\nTests: MALARIA HIV GLUCOSE HGB"
+		return "Usage: LAB <patient_ref> <test>\nEx: LAB PAT-A1B2 MALARIA\nTests: MALARIA HIV GLUCOSE HGB"
 	}
 	patientRef := cmd.Args[0]
 	testName := strings.Join(cmd.Args[1:], " ")
