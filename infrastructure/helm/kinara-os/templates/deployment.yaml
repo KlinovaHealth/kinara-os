@@ -1,4 +1,5 @@
 {{- range $name, $svc := .Values.services }}
+{{- $imageName := default (printf "%s-service" $name) $svc.image }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +9,7 @@ metadata:
   labels:
     app: {{ $name }}-service
     version: {{ $.Chart.AppVersion }}
+    pillar: kinara
 spec:
   replicas: {{ $svc.replicas }}
   selector:
@@ -26,14 +28,19 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: {{ $svc.port | quote }}
+        prometheus.io/path: "/metrics"
     spec:
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsUser: 1000
         runAsNonRoot: true
         fsGroup: 1000
       containers:
         - name: {{ $name }}-service
-          image: {{ $.Values.global.imageRegistry }}/{{ $name }}-service:{{ $.Chart.AppVersion }}
+          image: {{ $.Values.global.imageRegistry }}/{{ $imageName }}:{{ $.Values.global.imageTag | default "latest" }}
           imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
           ports:
             - containerPort: {{ $svc.port }}
@@ -41,39 +48,61 @@ spec:
           env:
             - name: PORT
               value: {{ $svc.port | quote }}
-            - name: DATABASE_URL
+            # DB credentials from shared secret; DATABASE_URL assembled via K8s env var interpolation
+            - name: _DB_HOST
               valueFrom:
                 secretKeyRef:
-                  name: {{ $name }}-service-secrets
-                  key: database-url
+                  name: kinara-db-credentials
+                  key: host
+            - name: _DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: kinara-db-credentials
+                  key: port
+            - name: _DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: kinara-db-credentials
+                  key: user
+            - name: _DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: kinara-db-credentials
+                  key: pass
+            - name: DATABASE_URL
+              value: "postgresql://$(_DB_USER):$(_DB_PASS)@$(_DB_HOST):$(_DB_PORT)/{{ $svc.db }}?sslmode=require"
             - name: JWT_PUBLIC_KEY_PATH
               value: {{ $.Values.global.jwtPublicKeyPath }}
             - name: REDIS_URL
+              value: "redis://kinara-redis:6379"
+            - name: ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:
                   name: kinara-shared-secrets
-                  key: redis-url
-            - name: AES_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: kinara-shared-secrets
-                  key: aes-key
+                  key: encryption-key
           resources:
+            {{- if $.Values.defaultResources }}
+            {{- toYaml $.Values.defaultResources | nindent 12 }}
+            {{- else }}
             requests:
               cpu: "100m"
               memory: "128Mi"
             limits:
               cpu: "500m"
               memory: "512Mi"
+            {{- end }}
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           livenessProbe:
             httpGet:
               path: /health
               port: {{ $svc.port }}
-            initialDelaySeconds: 10
-            periodSeconds: 15
+            initialDelaySeconds: 15
+            periodSeconds: 20
             failureThreshold: 3
           readinessProbe:
             httpGet:
@@ -83,17 +112,18 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
           volumeMounts:
-            - name: jwt-keys
+            - name: jwt-public-key
               mountPath: /etc/jwt
               readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: jwt-keys
+        - name: jwt-public-key
           secret:
-            secretName: kinara-jwt-keys
+            secretName: kinara-jwt-public-key
         - name: tmp
           emptyDir: {}
+      terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -103,12 +133,14 @@ metadata:
   labels:
     app: {{ $name }}-service
 spec:
+  type: ClusterIP
   selector:
     app: {{ $name }}-service
   ports:
     - port: {{ $svc.port }}
       targetPort: {{ $svc.port }}
       name: http
+{{- if $.Values.hpa.enabled }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -135,15 +167,5 @@ spec:
         target:
           type: Utilization
           averageUtilization: 80
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: {{ $name }}-service-pdb
-  namespace: {{ $.Values.global.namespace }}
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: {{ $name }}-service
+{{- end }}
 {{- end }}

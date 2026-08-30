@@ -1,0 +1,36 @@
+Kinara OS deployed to namespace: {{ .Values.global.namespace }}
+
+Services: {{ len .Values.services }} microservices
+Registry: {{ .Values.global.imageRegistry }}
+Image tag: {{ .Values.global.imageTag | default "latest" }}
+
+Before pods start, ensure these secrets exist in namespace {{ .Values.global.namespace }}:
+
+  1. ghcr-pull-secret (imagePullSecret for ghcr.io/klinovahealth)
+     kubectl create secret docker-registry ghcr-pull-secret \
+       --docker-server=ghcr.io \
+       --docker-username=KlinovaHealth \
+       --docker-password=<GH_PACKAGES_PAT> \
+       -n {{ .Values.global.namespace }}
+
+  2. kinara-db-credentials (DO managed PostgreSQL)
+     kubectl create secret generic kinara-db-credentials \
+       --from-literal=host=<DB_HOST> \
+       --from-literal=port=25060 \
+       --from-literal=user=kinara_app \
+       --from-literal=pass=<APP_USER_PASSWORD> \
+       -n {{ .Values.global.namespace }}
+
+  3. kinara-shared-secrets
+     kubectl create secret generic kinara-shared-secrets \
+       --from-literal=encryption-key=<32_BYTE_HEX_KEY> \
+       -n {{ .Values.global.namespace }}
+
+  4. kinara-jwt-public-key (RS256 public key PEM)
+     kubectl create secret generic kinara-jwt-public-key \
+       --from-file=public.pem=<path_to_public.pem> \
+       -n {{ .Values.global.namespace }}
+
+Health checks:
+  kubectl get pods -n {{ .Values.global.namespace }}
+  kubectl logs -n {{ .Values.global.namespace }} <pod-name>

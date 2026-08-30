@@ -1,0 +1,69 @@
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kinara-ingress
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+spec:
+  ingressClassName: {{ .Values.ingress.className | default "nginx" }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # Health pillar
+          - path: /api/v1/patients
+            pathType: Prefix
+            backend:
+              service:
+                name: patient-service
+                port:
+                  number: {{ (index .Values.services "patient").port }}
+          - path: /api/v1/farmers
+            pathType: Prefix
+            backend:
+              service:
+                name: farmer-service
+                port:
+                  number: {{ (index .Values.services "farmer").port }}
+          - path: /api/v1/market
+            pathType: Prefix
+            backend:
+              service:
+                name: market-service
+                port:
+                  number: {{ (index .Values.services "market").port }}
+          - path: /api/v1/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: {{ (index .Values.services "payment").port }}
+          - path: /api/v1/ports
+            pathType: Prefix
+            backend:
+              service:
+                name: port-service
+                port:
+                  number: {{ (index .Values.services "port").port }}
+          - path: /api/v1/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: {{ (index .Values.services "notification").port }}
+          # Health checks (all services respond at /health)
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: patient-service
+                port:
+                  number: {{ (index .Values.services "patient").port }}
+{{- end }}

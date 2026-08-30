@@ -1,71 +1,103 @@
 # Staging environment overrides
-global:
-  environment: staging
-  imageTag: latest
-  registry: registry.digitalocean.com/kinara
-  replicaCount: 1
+# Registry: ghcr.io/klinovahealth (images built by CI — NOT DO Container Registry)
+# Database: DigitalOcean Managed PostgreSQL cluster (kinara-prod, fra1)
+# Cluster:  staging-kinara (DO Kubernetes, fra1)
 
-# Staging uses reduced resources
+global:
+  imageRegistry: ghcr.io/klinovahealth
+  imageTag: latest
+  imagePullPolicy: Always
+  namespace: staging
+  jwtPublicKeyPath: /etc/jwt/public.pem
+  imagePullSecrets:
+    - name: ghcr-pull-secret
+
+hpa:
+  enabled: false
+
+# Single replica per service in staging
+defaultReplicas: 1
+
+# Staging resource limits — 3-node s-2vcpu-4gb cluster (6 vCPU / 12 GB total)
 defaultResources:
   requests:
     cpu: 50m
     memory: 64Mi
   limits:
-    cpu: 200m
+    cpu: 300m
     memory: 256Mi
 
-# Disable HPA in staging — single replica per service
-hpa:
-  enabled: false
+redis:
+  enabled: true
+  image: redis:7-alpine
+  maxmemory: 256mb
+  replicas: 1
 
-# Staging DB — shared Postgres on same cluster
-postgresql:
-  host: postgres-staging
-  port: 5432
-  database: kinara_staging
-  sslMode: prefer
+# DigitalOcean Managed PostgreSQL — staging uses the kinara-prod cluster
+# with kinara_app role (DML) created in Phase 2
+database:
+  host: kinara-prod-do-user-43233394-0.l.db.ondigitalocean.com
+  port: "25060"
+  user: kinara_app
+  sslMode: require
+  # password stored in Kubernetes secret: kinara-db-credentials / pass
 
-# Disable PodDisruptionBudget in staging
-pdb:
-  enabled: false
-
-# Staging ingress — no TLS cert, use nip.io
 ingress:
   enabled: true
   className: nginx
-  host: kinara-staging.klinova.co
+  # host set at deploy time via --set ingress.host=<loadbalancer-ip>.nip.io
+  host: ""
   tls: false
 
-# Lower log verbosity than prod
-logLevel: info
-
-# Reduced Twilio rate limits for staging
-sms:
-  maxPerMinute: 10
-  provider: africastalking
-
-# Services included in staging
+# Override replicas to 1 for all services in staging
 services:
-  farmer-service: { enabled: true, port: 8084 }
-  market-service: { enabled: true, port: 8083 }
-  patient-service: { enabled: true, port: 8081 }
-  clinical-service: { enabled: true, port: 8082 }
-  payment-service: { enabled: true, port: 8107 }
-  sms-gateway: { enabled: true, port: 8101 }
-  analytics-service: { enabled: true, port: 8108 }
-  audit-service: { enabled: true, port: 8111 }
-  auth-service: { enabled: true, port: 8079 }
-  appointment-service: { enabled: true, port: 8120 }
-  immunization-service: { enabled: true, port: 8121 }
-  lab-service: { enabled: true, port: 8122 }
-  outbreak-service: { enabled: true, port: 8123 }
-  input-service: { enabled: true, port: 8125 }
-  extension-service:            { enabled: true, port: 8126 }
-  vehicle-tracking-service:     { enabled: true, port: 8127 }
-  telemedicine-service:         { enabled: true, port: 8102 }
-  health-analytics-service:     { enabled: true, port: 8109 }
-  health-compliance-service:    { enabled: true, port: 8110 }
-  voyage-service:               { enabled: true, port: 8124 }
-  farmer-finance-service:       { enabled: true, port: 8097 }
-  admin-dashboard-backend:      { enabled: true, port: 8117 }
-  government-dashboard-backend: { enabled: true, port: 8116 }
+  analytics:           { port: 8108, replicas: 1, maxReplicas: 2, db: kinara_analytics }
+  appointment:         { port: 8109, replicas: 1, maxReplicas: 2, db: kinara_appointment }
+  audit:               { port: 8115, replicas: 1, maxReplicas: 2, db: kinara_audit }
+  auth:                { port: 8080, replicas: 1, maxReplicas: 2, db: kinara_auth }
+  cargo-maritime:      { port: 8101, replicas: 1, maxReplicas: 2, db: kinara_cargo }
+  cargo:               { port: 8091, replicas: 1, maxReplicas: 2, db: kinara_cargo }
+  clinical:            { port: 8082, replicas: 1, maxReplicas: 2, db: kinara_clinical }
+  compliance:          { port: 8096, replicas: 1, maxReplicas: 2, db: kinara_compliance }
+  cooperative:         { port: 8087, replicas: 1, maxReplicas: 2, db: kinara_cooperative }
+  crew:                { port: 8110, replicas: 1, maxReplicas: 2, db: kinara_crew }
+  customs:             { port: 8102, replicas: 1, maxReplicas: 2, db: kinara_customs }
+  dock:                { port: 8100, replicas: 1, maxReplicas: 2, db: kinara_dock }
+  documentation:       { port: 8106, replicas: 1, maxReplicas: 2, db: kinara_documentation }
+  driver:              { port: 8090, replicas: 1, maxReplicas: 2, db: kinara_transport }
+  extension:           { port: 8126, replicas: 1, maxReplicas: 2, db: kinara_extension }
+  farmer-finance:      { port: 8112, replicas: 1, maxReplicas: 2, db: kinara_farmer_finance }
+  farmer:              { port: 8084, replicas: 1, maxReplicas: 2, db: kinara_farmer }
+  fleet:               { port: 8089, replicas: 1, maxReplicas: 2, db: kinara_fleet }
+  governance:          { port: 8083, replicas: 1, maxReplicas: 2, db: kinara_governance }
+  health-analytics:    { port: 8110, replicas: 1, maxReplicas: 2, db: kinara_analytics }
+  health-compliance:   { port: 8111, replicas: 1, maxReplicas: 2, db: kinara_compliance }
+  immunization:        { port: 8121, replicas: 1, maxReplicas: 2, db: kinara_immunization }
+  input:               { port: 8125, replicas: 1, maxReplicas: 2, db: kinara_input }
+  irrigation:          { port: 8086, replicas: 1, maxReplicas: 2, db: kinara_irrigation }
+  lab:                 { port: 8122, replicas: 1, maxReplicas: 2, db: kinara_lab }
+  last-mile:           { port: 8094, replicas: 1, maxReplicas: 2, db: kinara_lastmile }
+  livestock:           { port: 8087, replicas: 1, maxReplicas: 2, db: kinara_livestock }
+  logistics-analytics: { port: 8097, replicas: 1, maxReplicas: 2, db: kinara_logistics_analytics }
+  market:              { port: 8086, replicas: 1, maxReplicas: 2, db: kinara_market }
+  notification:        { port: 8085, replicas: 1, maxReplicas: 2, db: kinara_notification }
+  outbreak:            { port: 8123, replicas: 1, maxReplicas: 2, db: kinara_outbreak }
+  patient:             { port: 8081, replicas: 1, maxReplicas: 2, db: kinara_patient }
+  payment:             { port: 8107, replicas: 1, maxReplicas: 2, db: kinara_payment }
+  pharmacy:            { port: 8117, replicas: 1, maxReplicas: 2, db: kinara_pharmacy }
+  port:                { port: 8098, replicas: 1, maxReplicas: 2, db: kinara_port }
+  referral:            { port: 8118, replicas: 1, maxReplicas: 2, db: kinara_referral }
+  route:               { port: 8092, replicas: 1, maxReplicas: 2, db: kinara_transport }
+  shipment:            { port: 8095, replicas: 1, maxReplicas: 2, db: kinara_shipment }
+  shipping:            { port: 8103, replicas: 1, maxReplicas: 2, db: kinara_shipping }
+  sms-gateway:         { port: 8200, replicas: 1, maxReplicas: 2, db: kinara_sms, image: sms-gateway }
+  supply-chain:        { port: 8113, replicas: 1, maxReplicas: 2, db: kinara_supply_chain }
+  telemedicine:        { port: 8109, replicas: 1, maxReplicas: 2, db: kinara_telemedicine }
+  trade-finance:       { port: 8105, replicas: 1, maxReplicas: 2, db: kinara_trade_finance }
+  transport:           { port: 8093, replicas: 1, maxReplicas: 2, db: kinara_transport }
+  vehicle-tracking:    { port: 8127, replicas: 1, maxReplicas: 2, db: kinara_vehicle_tracking }
+  vessel:              { port: 8093, replicas: 1, maxReplicas: 2, db: kinara_vessel }
+  voyage:              { port: 8119, replicas: 1, maxReplicas: 2, db: kinara_voyage }
+  wallet:              { port: 8114, replicas: 1, maxReplicas: 2, db: kinara_payment }
+  warehouse:           { port: 8104, replicas: 1, maxReplicas: 2, db: kinara_warehouse }
+  weather:             { port: 8088, replicas: 1, maxReplicas: 2, db: kinara_weather }
