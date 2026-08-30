@@ -116,11 +116,18 @@ func (h *CustomsHandler) CreateClearance(w http.ResponseWriter, r *http.Request)
 	currency := req.Currency
 	if currency == "" { currency = "USD" }
 
-	// Auto-calculate duty and VAT using tariff lookup
+	// Auto-calculate duty and VAT: scan all tariffs for the first HS code match.
 	dutyRate := 0.0
 	vatRate := 0.0
-	t, err := h.store.LookupTariff(r.Context(), req.HSCode, "")
-	if err == nil { dutyRate = t.DutyRate; vatRate = t.VATRate }
+	if all, lerr := h.store.ListTariffs(r.Context(), nil); lerr == nil {
+		for _, t := range all {
+			if t.HSCode == req.HSCode {
+				dutyRate = t.DutyRate
+				vatRate = t.VATRate
+				break
+			}
+		}
+	}
 	dutyAmount := req.DeclaredValue * dutyRate / 100
 	vatAmount := req.DeclaredValue * vatRate / 100
 	totalDue := dutyAmount + vatAmount

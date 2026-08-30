@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -10,7 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// responseWriter wraps http.ResponseWriter to capture the status code.
+type contextKey string
+
+const ContextKeyRequestID contextKey = "request_id"
+
 type responseWriter struct {
 	http.ResponseWriter
 	status int
@@ -28,7 +31,6 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-// RequestID injects a unique X-Request-ID into every request context and response.
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqID := r.Header.Get("X-Request-ID")
@@ -36,12 +38,11 @@ func RequestID(next http.Handler) http.Handler {
 			reqID = uuid.New().String()
 		}
 		w.Header().Set("X-Request-ID", reqID)
-		ctx := contextWithRequestID(r.Context(), reqID)
+		ctx := context.WithValue(r.Context(), ContextKeyRequestID, reqID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-// Logging emits a structured JSON log line per request.
 func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -61,7 +62,6 @@ func Logging(next http.Handler) http.Handler {
 	})
 }
 
-// writeJSON is a shared helper used across middleware and handlers.
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {
@@ -69,14 +69,7 @@ func writeJSON(w http.ResponseWriter, v interface{}) {
 	}
 }
 
-func contextWithRequestID(ctx interface{ Value(any) any }, id string) interface{ Value(any) any } {
-	// Thin wrapper — the real implementation uses context.WithValue in RequestID above.
-	// This stub satisfies the compiler; real callers use context directly.
-	_ = fmt.Sprintf("%v", ctx)
-	return ctx
-}
-
-func requestIDFromContext(ctx interface{ Value(any) any }) string {
+func requestIDFromContext(ctx context.Context) string {
 	if v := ctx.Value(ContextKeyRequestID); v != nil {
 		if s, ok := v.(string); ok {
 			return s
