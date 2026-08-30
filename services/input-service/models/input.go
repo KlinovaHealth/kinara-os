@@ -1,68 +1,41 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type InputType string
-type InputUnit string
-
-const (
-	InputSeed       InputType = "seed"
-	InputFertilizer InputType = "fertilizer"
-	InputPesticide  InputType = "pesticide"
-	InputEquipment  InputType = "equipment"
-	InputFuel       InputType = "fuel"
-
-	UnitKG    InputUnit = "kg"
-	UnitLiter InputUnit = "liter"
-	UnitPiece InputUnit = "piece"
-	UnitBag   InputUnit = "bag"
-)
-
-type InputPurchase struct {
-	ID           uuid.UUID `json:"id"`
-	PurchaseRef  string    `json:"purchase_ref"`
-	FarmerID     uuid.UUID `json:"farmer_id"`
-	CoopID       *uuid.UUID `json:"coop_id,omitempty"`
-	InputType    InputType `json:"input_type"`
-	InputName    string    `json:"input_name"`
-	Quantity     float64   `json:"quantity"`
-	Unit         InputUnit `json:"unit"`
-	CostXOF      float64   `json:"cost_xof"`
-	Supplier     string    `json:"supplier"`
-	PurchasedAt  time.Time `json:"purchased_at"`
-	TenantID     string    `json:"tenant_id"`
-	CreatedAt    time.Time `json:"created_at"`
+type Form struct {
+	ID        uuid.UUID       `json:"id"`
+	FormType  string          `json:"form_type"`
+	Title     string          `json:"title"`
+	Schema    json.RawMessage `json:"schema"`
+	Version   int             `json:"version"`
+	Active    bool            `json:"active"`
+	CreatedAt time.Time       `json:"created_at"`
 }
 
-type InputUsage struct {
-	ID          uuid.UUID `json:"id"`
-	PurchaseID  uuid.UUID `json:"purchase_id"`
-	FarmerID    uuid.UUID `json:"farmer_id"`
-	FieldID     string    `json:"field_id"`
-	Quantity    float64   `json:"quantity"`
-	UsedAt      time.Time `json:"used_at"`
-	Notes       string    `json:"notes,omitempty"`
+type FormSubmission struct {
+	ID            uuid.UUID       `json:"id"`
+	SubmissionRef string          `json:"submission_ref"`
+	PatientID     uuid.UUID       `json:"patient_id"`
+	FormType      string          `json:"form_type"`
+	FormVersion   int             `json:"form_version"`
+	Data          json.RawMessage `json:"data"`
+	SubmittedBy   uuid.UUID       `json:"submitted_by"`
+	TenantID      string          `json:"tenant_id"`
+	SubmittedAt   time.Time       `json:"submitted_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
-type CreatePurchaseRequest struct {
-	FarmerID    uuid.UUID  `json:"farmer_id"`
-	CoopID      *uuid.UUID `json:"coop_id"`
-	InputType   InputType  `json:"input_type"`
-	InputName   string     `json:"input_name"`
-	Quantity    float64    `json:"quantity"`
-	Unit        InputUnit  `json:"unit"`
-	CostXOF     float64    `json:"cost_xof"`
-	Supplier    string     `json:"supplier"`
-	PurchasedAt time.Time  `json:"purchased_at"`
+type SubmitRequest struct {
+	PatientID uuid.UUID       `json:"patient_id"`
+	FormType  string          `json:"form_type"`
+	Data      json.RawMessage `json:"data"`
 }
 
-type RecordUsageRequest struct {
-	FieldID  string    `json:"field_id"`
-	Quantity float64   `json:"quantity"`
-	UsedAt   time.Time `json:"used_at"`
-	Notes    string    `json:"notes"`
+type UpdateRequest struct {
+	Data json.RawMessage `json:"data"`
 }

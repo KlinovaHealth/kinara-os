@@ -9,5 +9,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o input-service .
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/input-service /input-service
-EXPOSE 8103
+EXPOSE 8125
 ENTRYPOINT ["/input-service"]

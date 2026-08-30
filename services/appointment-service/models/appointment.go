@@ -10,11 +10,11 @@ type AppointmentStatus string
 type AppointmentType string
 
 const (
-	StatusScheduled  AppointmentStatus = "scheduled"
-	StatusConfirmed  AppointmentStatus = "confirmed"
-	StatusCompleted  AppointmentStatus = "completed"
-	StatusCancelled  AppointmentStatus = "cancelled"
-	StatusNoShow     AppointmentStatus = "no_show"
+	StatusScheduled AppointmentStatus = "scheduled"
+	StatusConfirmed AppointmentStatus = "confirmed"
+	StatusCompleted AppointmentStatus = "completed"
+	StatusCancelled AppointmentStatus = "cancelled"
+	StatusNoShow    AppointmentStatus = "no_show"
 
 	TypeConsultation AppointmentType = "consultation"
 	TypeFollowUp     AppointmentType = "follow_up"
@@ -33,6 +33,9 @@ type Appointment struct {
 	Type           AppointmentType   `json:"type"`
 	Status         AppointmentStatus `json:"status"`
 	Notes          string            `json:"notes,omitempty"`
+	Reason         string            `json:"reason,omitempty"`
+	CancelledBy    string            `json:"cancelled_by,omitempty"`
+	CompletedBy    string            `json:"completed_by,omitempty"`
 	TenantID       string            `json:"tenant_id"`
 	CreatedAt      time.Time         `json:"created_at"`
 	UpdatedAt      time.Time         `json:"updated_at"`
@@ -51,4 +54,28 @@ type CreateAppointmentRequest struct {
 type UpdateStatusRequest struct {
 	Status AppointmentStatus `json:"status"`
 	Notes  string            `json:"notes"`
+}
+
+type RescheduleRequest struct {
+	ScheduledAt time.Time `json:"scheduled_at"`
+	DurationMin int       `json:"duration_minutes"`
+	Reason      string    `json:"reason"`
+}
+
+type CancelRequest struct {
+	Reason string `json:"reason"`
+}
+
+type CompleteRequest struct {
+	Notes string `json:"notes"`
+}
+
+type AuditEntry struct {
+	ID            int64     `json:"id"`
+	AppointmentID string    `json:"appointment_id"`
+	Action        string    `json:"action"`
+	ActorID       string    `json:"actor_id"`
+	OldStatus     string    `json:"old_status,omitempty"`
+	NewStatus     string    `json:"new_status,omitempty"`
+	OccurredAt    time.Time `json:"occurred_at"`
 }

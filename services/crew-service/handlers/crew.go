@@ -33,8 +33,8 @@ func (h *Handler) Register(r *mux.Router) {
 }
 
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	claims, ok := middleware.ClaimsFromContext(r.Context())
-	if !ok {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
 		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}

@@ -66,6 +66,8 @@ const SERVICES = [
   { name: 'wallet-service',             port: 8105, pillar: 'agri' },
   { name: 'warehouse-service',          port: 8108, pillar: 'logistics' },
   { name: 'weather-service',            port: 8106, pillar: 'agri' },
+  { name: 'extension-service',          port: 8126, pillar: 'agri' },
+  { name: 'vehicle-tracking-service',   port: 8127, pillar: 'logistics' },
 ].map(s => ({
   ...s,
   url: process.env[`${s.name.toUpperCase().replace(/-/g,'_')}_URL`] ||

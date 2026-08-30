@@ -59,3 +59,6 @@ services:
   immunization-service: { enabled: true, port: 8121 }
   lab-service: { enabled: true, port: 8122 }
   outbreak-service: { enabled: true, port: 8123 }
+  input-service: { enabled: true, port: 8125 }
+  extension-service: { enabled: true, port: 8126 }
+  vehicle-tracking-service: { enabled: true, port: 8127 }

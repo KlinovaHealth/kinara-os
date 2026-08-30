@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/klinova/kinara-os/immunization-service/auth"
 	"github.com/klinova/kinara-os/immunization-service/db"
 	"github.com/klinova/kinara-os/immunization-service/handlers"
 	"github.com/klinova/kinara-os/immunization-service/middleware"
@@ -18,6 +19,7 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		logger.Error("db connect failed", "error", err)
@@ -25,9 +27,15 @@ func main() {
 	}
 	defer pool.Close()
 
+	v, err := auth.NewValidator(os.Getenv("JWT_PUBLIC_KEY"))
+	if err != nil {
+		logger.Error("jwt validator init failed", "error", err)
+		os.Exit(1)
+	}
+
 	h := handlers.New(db.New(pool))
 	r := mux.NewRouter()
-	r.Use(middleware.JWT(os.Getenv("JWT_PUBLIC_KEY")))
+	r.Use(middleware.JWT(v))
 	r.Use(middleware.Logging(logger))
 	h.Register(r)
 	r.Handle("/metrics", promhttp.Handler())
@@ -38,7 +46,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8111"
+		port = "8121"
 	}
 	srv := &http.Server{Addr: ":" + port, Handler: r, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second}
 	logger.Info("immunization-service starting", "port", port)

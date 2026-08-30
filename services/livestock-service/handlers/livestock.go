@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -16,26 +17,54 @@ import (
 	"github.com/klinova/kinara-os/livestock-service/models"
 )
 
-var reqTotal = promauto.NewCounterVec(prometheus.CounterOpts{Name: "livestock_requests_total"}, []string{"method", "path", "status"})
+var (
+	animalsRegistered = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "livestock_animals_registered_total",
+		Help: "Total number of animals registered.",
+	})
+	healthEventsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "livestock_health_events_total",
+		Help: "Total number of health events logged.",
+	})
+	productionRecords = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "livestock_production_records_total",
+		Help: "Total number of production records logged.",
+	})
+)
 
-type Handler struct{ queries *db.Queries }
+// Store is the db.Store interface (re-exported for testability).
+type Store = db.Store
 
-func New(q *db.Queries) *Handler { return &Handler{queries: q} }
+// Handler holds the store dependency.
+type Handler struct{ store Store }
 
+// New constructs a Handler from the concrete *db.Queries.
+func New(q *db.Queries) *Handler { return &Handler{store: q} }
+
+// NewWithStore constructs a Handler from any Store (used in tests).
+func NewWithStore(s Store) *Handler { return &Handler{store: s} }
+
+// Register wires all routes.
 func (h *Handler) Register(r *mux.Router) {
 	api := r.PathPrefix("/api/v1/livestock").Subrouter()
-	api.HandleFunc("/animals", h.register).Methods(http.MethodPost)
+	api.HandleFunc("/animals", h.registerAnimal).Methods(http.MethodPost)
 	api.HandleFunc("/animals/{id}", h.getAnimal).Methods(http.MethodGet)
-	api.HandleFunc("/animals/{id}/health", h.updateHealth).Methods(http.MethodPut)
-	api.HandleFunc("/animals/{id}/production", h.recordProduction).Methods(http.MethodPost)
-	api.HandleFunc("/farmer/{farmer_id}/animals", h.listByFarmer).Methods(http.MethodGet)
-	api.HandleFunc("/farmer/{farmer_id}/production", h.productionSummary).Methods(http.MethodGet)
+	api.HandleFunc("/animals/{id}/health", h.logHealthEvent).Methods(http.MethodPost)
+	api.HandleFunc("/animals/{id}/health-history", h.getHealthHistory).Methods(http.MethodGet)
+	api.HandleFunc("/animals/{id}/production", h.logProduction).Methods(http.MethodPost)
+	api.HandleFunc("/farmers/{farmer_id}/herd", h.listHerd).Methods(http.MethodGet)
+	api.HandleFunc("/farmers/{farmer_id}/analytics", h.herdAnalytics).Methods(http.MethodGet)
 }
 
-func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	claims, ok := middleware.ClaimsFromContext(r.Context())
-	if !ok {
+// POST /api/v1/livestock/animals
+func (h *Handler) registerAnimal(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
 		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	if !claims.IsAllowedRole("farmer", "admin") {
+		respond(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
 		return
 	}
 	var req models.RegisterAnimalRequest
@@ -44,100 +73,193 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := uuid.New()
-	now := time.Now().UTC()
-	a := models.Animal{
+	animal := models.Animal{
 		ID:           id,
-		TagRef:       "ANM-" + strings.ToUpper(id.String()[:8]),
+		AnimalRef:    "ANM-" + strings.ToUpper(id.String()[:8]),
 		FarmerID:     req.FarmerID,
-		Species:      req.Species,
+		AnimalType:   req.AnimalType,
 		Breed:        req.Breed,
-		BirthDate:    req.BirthDate,
-		WeightKg:     req.WeightKg,
-		HealthStatus: models.HealthHealthy,
-		IsActive:     true,
+		AgeMonths:    req.AgeMonths,
+		Sex:          req.Sex,
+		EarTag:       req.EarTag,
 		TenantID:     claims.TenantID,
-		RegisteredAt: now,
-		UpdatedAt:    now,
+		RegisteredAt: time.Now().UTC(),
 	}
-	if err := h.queries.RegisterAnimal(r.Context(), a); err != nil {
+	if err := h.store.RegisterAnimal(r.Context(), animal); err != nil {
 		respond(w, http.StatusInternalServerError, map[string]string{"error": "register failed"})
 		return
 	}
-	reqTotal.WithLabelValues("POST", "/livestock/animals", "201").Inc()
-	respond(w, http.StatusCreated, map[string]interface{}{"success": true, "data": a})
+	animalsRegistered.Inc()
+	go func() {
+		if err := h.store.InsertAudit(r.Context(), id.String(), claims.UserID.String(), "register_animal"); err != nil {
+			slog.Error("audit insert failed", "error", err)
+		}
+	}()
+	respond(w, http.StatusCreated, map[string]interface{}{"success": true, "data": animal})
 }
 
+// GET /api/v1/livestock/animals/{id}
 func (h *Handler) getAnimal(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
+		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid id"})
 		return
 	}
-	a, err := h.queries.GetAnimal(r.Context(), id)
+	animal, err := h.store.GetAnimal(r.Context(), id)
 	if err != nil {
 		respond(w, http.StatusNotFound, map[string]string{"error": "not found"})
 		return
 	}
-	respond(w, http.StatusOK, map[string]interface{}{"success": true, "data": a})
+	respond(w, http.StatusOK, map[string]interface{}{"success": true, "data": animal})
 }
 
-func (h *Handler) updateHealth(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid id"})
+// POST /api/v1/livestock/animals/{id}/health
+func (h *Handler) logHealthEvent(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
+		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
-	var req models.UpdateHealthRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
+	if !claims.IsAllowedRole("farmer", "vet", "admin") {
+		respond(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
 		return
 	}
-	if err := h.queries.UpdateHealth(r.Context(), id, req.HealthStatus, req.WeightKg, time.Now().UTC()); err != nil {
-		respond(w, http.StatusInternalServerError, map[string]string{"error": "update failed"})
-		return
-	}
-	respond(w, http.StatusOK, map[string]interface{}{"success": true, "id": id})
-}
-
-func (h *Handler) recordProduction(w http.ResponseWriter, r *http.Request) {
 	animalID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid id"})
 		return
 	}
-	animal, err := h.queries.GetAnimal(r.Context(), animalID)
-	if err != nil {
-		respond(w, http.StatusNotFound, map[string]string{"error": "animal not found"})
-		return
-	}
-	var req models.RecordProductionRequest
+	var req models.HealthEventRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
 		return
 	}
-	p := models.ProductionRecord{
-		ID:          uuid.New(),
-		AnimalID:    animalID,
-		FarmerID:    animal.FarmerID,
-		ProductType: req.ProductType,
-		QuantityKg:  req.QuantityKg,
-		RecordedAt:  req.RecordedAt,
-		Notes:       req.Notes,
+	event := models.HealthEvent{
+		ID:             uuid.New(),
+		AnimalID:       animalID,
+		EventType:      req.EventType,
+		Description:    req.Description,
+		Treatment:      req.Treatment,
+		VeterinarianID: req.VeterinarianID,
+		EventDate:      time.Now().UTC(),
+		CreatedBy:      claims.UserID,
 	}
-	if err := h.queries.RecordProduction(r.Context(), p); err != nil {
-		respond(w, http.StatusInternalServerError, map[string]string{"error": "record failed"})
+	if err := h.store.LogHealthEvent(r.Context(), event); err != nil {
+		respond(w, http.StatusInternalServerError, map[string]string{"error": "log failed"})
 		return
 	}
-	respond(w, http.StatusCreated, map[string]interface{}{"success": true, "data": p})
+	healthEventsTotal.Inc()
+	// If illness, insert veterinary alert (fire-and-forget).
+	if req.EventType == "illness" {
+		go func() {
+			alert := models.VeterinaryAlert{
+				ID:        uuid.New(),
+				AnimalID:  animalID,
+				AlertType: "illness_detected",
+				Priority:  "high",
+				CreatedAt: time.Now().UTC(),
+			}
+			if err := h.store.InsertVetAlert(r.Context(), alert); err != nil {
+				slog.Error("vet alert insert failed", "error", err)
+			}
+		}()
+	}
+	go func() {
+		if err := h.store.InsertAudit(r.Context(), animalID.String(), claims.UserID.String(), "log_health_event"); err != nil {
+			slog.Error("audit insert failed", "error", err)
+		}
+	}()
+	respond(w, http.StatusCreated, map[string]interface{}{"success": true, "data": event})
 }
 
-func (h *Handler) listByFarmer(w http.ResponseWriter, r *http.Request) {
+// GET /api/v1/livestock/animals/{id}/health-history
+func (h *Handler) getHealthHistory(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
+		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	animalID, err := uuid.Parse(mux.Vars(r)["id"])
+	if err != nil {
+		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid id"})
+		return
+	}
+	history, err := h.store.GetHealthHistory(r.Context(), animalID)
+	if err != nil {
+		respond(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
+		return
+	}
+	if history == nil {
+		history = []models.HealthEvent{}
+	}
+	respond(w, http.StatusOK, map[string]interface{}{"success": true, "data": history})
+}
+
+// POST /api/v1/livestock/animals/{id}/production
+func (h *Handler) logProduction(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
+		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	if !claims.IsAllowedRole("farmer", "admin") {
+		respond(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
+		return
+	}
+	animalID, err := uuid.Parse(mux.Vars(r)["id"])
+	if err != nil {
+		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid id"})
+		return
+	}
+	var req models.ProductionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
+		return
+	}
+	recordedDate := req.RecordedDate
+	if recordedDate.IsZero() {
+		recordedDate = time.Now().UTC()
+	}
+	rec := models.ProductionRecord{
+		ID:             uuid.New(),
+		AnimalID:       animalID,
+		ProductionType: req.ProductionType,
+		Quantity:       req.Quantity,
+		Unit:           req.Unit,
+		RecordedDate:   recordedDate,
+		RecordedBy:     claims.UserID,
+	}
+	if err := h.store.LogProduction(r.Context(), rec); err != nil {
+		respond(w, http.StatusInternalServerError, map[string]string{"error": "log failed"})
+		return
+	}
+	productionRecords.Inc()
+	go func() {
+		if err := h.store.InsertAudit(r.Context(), animalID.String(), claims.UserID.String(), "log_production"); err != nil {
+			slog.Error("audit insert failed", "error", err)
+		}
+	}()
+	respond(w, http.StatusCreated, map[string]interface{}{"success": true, "data": rec})
+}
+
+// GET /api/v1/livestock/farmers/{farmer_id}/herd
+func (h *Handler) listHerd(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
+		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
 	farmerID, err := uuid.Parse(mux.Vars(r)["farmer_id"])
 	if err != nil {
 		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid farmer_id"})
 		return
 	}
-	animals, err := h.queries.ListByFarmer(r.Context(), farmerID)
+	animals, err := h.store.ListHerd(r.Context(), farmerID)
 	if err != nil {
 		respond(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
 		return
@@ -148,24 +270,24 @@ func (h *Handler) listByFarmer(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, map[string]interface{}{"success": true, "data": animals})
 }
 
-func (h *Handler) productionSummary(w http.ResponseWriter, r *http.Request) {
+// GET /api/v1/livestock/farmers/{farmer_id}/analytics
+func (h *Handler) herdAnalytics(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
+		respond(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
 	farmerID, err := uuid.Parse(mux.Vars(r)["farmer_id"])
 	if err != nil {
 		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid farmer_id"})
 		return
 	}
-	since := time.Now().UTC().AddDate(0, -1, 0)
-	total, err := h.queries.SumProduction(r.Context(), farmerID, since)
+	analytics, err := h.store.GetHerdAnalytics(r.Context(), farmerID)
 	if err != nil {
 		respond(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
 		return
 	}
-	respond(w, http.StatusOK, map[string]interface{}{
-		"success":              true,
-		"farmer_id":            farmerID,
-		"period":               "last_30_days",
-		"total_production_kg":  total,
-	})
+	respond(w, http.StatusOK, map[string]interface{}{"success": true, "data": analytics})
 }
 
 func respond(w http.ResponseWriter, code int, body interface{}) {

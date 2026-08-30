@@ -17,9 +17,10 @@ const (
 	OrderCancelled  OrderStatus = "cancelled"
 
 	FlagNormal   ResultFlag = "normal"
+	FlagAbnormal ResultFlag = "abnormal"
+	FlagCritical ResultFlag = "critical"
 	FlagHigh     ResultFlag = "high"
 	FlagLow      ResultFlag = "low"
-	FlagCritical ResultFlag = "critical"
 )
 
 type LabOrder struct {
@@ -39,17 +40,29 @@ type LabOrder struct {
 }
 
 type LabResult struct {
-	ID             uuid.UUID  `json:"id"`
-	OrderID        uuid.UUID  `json:"order_id"`
-	PatientID      uuid.UUID  `json:"patient_id"`
-	TestCode       string     `json:"test_code"`
-	ResultValue    string     `json:"result_value"`
-	Unit           string     `json:"unit"`
-	ReferenceRange string     `json:"reference_range"`
-	Flag           ResultFlag `json:"flag"`
-	AnalyzedBy     uuid.UUID  `json:"analyzed_by"`
-	ResultAt       time.Time  `json:"result_at"`
-	TenantID       string     `json:"tenant_id"`
+	ID          uuid.UUID `json:"id"`
+	OrderID     uuid.UUID `json:"order_id"`
+	ResultValue float64   `json:"result_value"`
+	Unit        string    `json:"unit"`
+	NormalLow   float64   `json:"normal_low"`
+	NormalHigh  float64   `json:"normal_high"`
+	Flag        string    `json:"flag"` // "normal", "abnormal", "critical"
+	Notes       string    `json:"notes,omitempty"`
+	RecordedBy  uuid.UUID `json:"recorded_by"`
+	RecordedAt  time.Time `json:"recorded_at"`
+}
+
+type LabResultWithOrder struct {
+	Order  LabOrder   `json:"order"`
+	Result *LabResult `json:"result,omitempty"`
+}
+
+type TestCatalogEntry struct {
+	TestCode   string  `json:"test_code"`
+	TestName   string  `json:"test_name"`
+	NormalLow  float64 `json:"normal_low"`
+	NormalHigh float64 `json:"normal_high"`
+	Unit       string  `json:"unit"`
 }
 
 type CreateOrderRequest struct {
@@ -62,10 +75,13 @@ type CreateOrderRequest struct {
 	Notes     string    `json:"notes"`
 }
 
-type RecordResultRequest struct {
-	ResultValue    string     `json:"result_value"`
-	Unit           string     `json:"unit"`
-	ReferenceRange string     `json:"reference_range"`
-	Flag           ResultFlag `json:"flag"`
-	AnalyzedBy     uuid.UUID  `json:"analyzed_by"`
+type UploadResultRequest struct {
+	ResultValue float64 `json:"result_value"`
+	Unit        string  `json:"unit"`
+	NormalLow   float64 `json:"normal_low"`
+	NormalHigh  float64 `json:"normal_high"`
+	Notes       string  `json:"notes"`
 }
+
+// RecordResultRequest kept as alias for backward compat.
+type RecordResultRequest = UploadResultRequest
