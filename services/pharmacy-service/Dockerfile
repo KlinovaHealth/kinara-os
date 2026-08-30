@@ -1,6 +1,9 @@
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /build
+ENV GOFLAGS=-mod=mod
+ENV GONOSUMDB=*
+
 
 RUN apk --no-cache add git
 
@@ -21,6 +24,9 @@ RUN apk --no-cache add ca-certificates tzdata && \
     adduser -S -G kinara pharmsvc
 
 WORKDIR /app
+ENV GOFLAGS=-mod=mod
+ENV GONOSUMDB=*
+
 
 COPY --from=builder /build/pharmacy-service .
 

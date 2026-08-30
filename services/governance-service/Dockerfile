@@ -1,6 +1,9 @@
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /build
+ENV GOFLAGS=-mod=mod
+ENV GONOSUMDB=*
+
 
 COPY go.mod ./
 RUN go mod download
@@ -19,6 +22,9 @@ RUN apk --no-cache add ca-certificates tzdata && \
     adduser -S -G kinara governance
 
 WORKDIR /app
+ENV GOFLAGS=-mod=mod
+ENV GONOSUMDB=*
+
 
 COPY --from=builder /build/governance-service .
 

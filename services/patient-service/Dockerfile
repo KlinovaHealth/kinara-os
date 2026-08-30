@@ -2,6 +2,9 @@
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
+ENV GOFLAGS=-mod=mod
+ENV GONOSUMDB=*
+
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata
@@ -23,6 +26,9 @@ FROM alpine:3.19
 RUN addgroup -S kinara && adduser -S patient -G kinara
 
 WORKDIR /app
+ENV GOFLAGS=-mod=mod
+ENV GONOSUMDB=*
+
 
 # Copy compiled binary and CA certs
 COPY --from=builder /patient-service /app/patient-service

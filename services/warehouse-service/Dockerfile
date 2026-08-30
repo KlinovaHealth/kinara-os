@@ -1,5 +1,8 @@
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
+ENV GOFLAGS=-mod=mod
+ENV GONOSUMDB=*
+
 RUN apk add --no-cache git ca-certificates
 COPY go.mod ./
 RUN go mod download
