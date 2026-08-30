@@ -109,6 +109,8 @@ services:
       <<: *service-env
       DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_patient?sslmode=disable
       PORT: "8081"
+    ports:
+      - "8081:8081"
     depends_on: [postgres, redis, auth-service]
 
   clinical-service:
@@ -191,6 +193,8 @@ services:
       <<: *service-env
       DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_farmer?sslmode=disable
       PORT: "8084"
+    ports:
+      - "8084:8084"
     depends_on: [postgres, redis, auth-service]
 
   market-service:
@@ -200,6 +204,8 @@ services:
       <<: *service-env
       DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_market?sslmode=disable
       PORT: "8086"
+    ports:
+      - "8086:8086"
     depends_on: [postgres, redis, auth-service]
 
   cooperative-service:
@@ -437,6 +443,8 @@ services:
       <<: *service-env
       DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_payment?sslmode=disable
       PORT: "8107"
+    ports:
+      - "8107:8107"
     depends_on: [postgres, redis, auth-service]
 
   documentation-service:
@@ -465,6 +473,8 @@ services:
       <<: *service-env
       DATABASE_URL: postgres://kinara:${POSTGRES_PASSWORD}@postgres:5432/kinara_sms?sslmode=disable
       PORT: "8200"
+    ports:
+      - "8200:8200"
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       AFRICASTALKING_API_KEY: ${AFRICASTALKING_API_KEY}
