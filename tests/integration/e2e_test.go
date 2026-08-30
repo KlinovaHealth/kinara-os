@@ -201,14 +201,6 @@ func TestFarmerToPaymentFlow(t *testing.T) {
 
 	// 1. Register farmer
 	t.Log("Step 1: Register farmer")
-	farmerBody := `{
-		"name": "Kofi Togo Test",
-		"phone": "+22890" + "` + fmt.Sprintf("%d", time.Now().UnixNano()%9000000+1000000) + `",
-		"country": "TG",
-		"primary_crop": "maize",
-		"farm_size_ha": 2.5,
-		"currency": "XOF"
-	}`
 	resp, err := http.Post(farmerURL+"/api/v1/farmers", "application/json", bytes.NewBufferString(`{
 		"name":"Kofi Togo Test","phone":"+22890111222","country":"TG",
 		"primary_crop":"maize","farm_size_ha":2.5,"currency":"XOF"}`))
