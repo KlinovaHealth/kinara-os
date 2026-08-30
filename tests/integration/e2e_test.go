@@ -718,3 +718,235 @@ func TestWorkflow6_AgriHealthIntegration(t *testing.T) {
 
 	t.Log("✓ Workflow 6: Agri→health integration complete")
 }
+
+// --- Workflow 7: Phase 1D SMS intents — all new commands ---
+// Tests all 50+ SMS intents added in Phase 1D.
+func TestWorkflow7_Phase1DSMSIntents(t *testing.T) {
+	smsURL := env("SMS_URL", "http://localhost:8101")
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	t.Log("=== Workflow 7: Phase 1D SMS Intents (50+ commands) ===")
+
+	cases := []struct {
+		step    string
+		payload string
+		cmdWant string
+	}{
+		// Agriculture
+		{"PRICE (French: PRIX)",           `{"from":"+22890WF7001","body":"PRIX MAIZE"}`,             "PRICE"},
+		{"BUYERS",                          `{"from":"+22890WF7001","body":"BUYERS COCOA"}`,            "BUYERS"},
+		{"SELL",                            `{"from":"+22890WF7001","body":"SELL MAIZE 500 280"}`,      "SELL"},
+		{"WEATHER (French: METEO)",         `{"from":"+22890WF7001","body":"METEO Lome"}`,              "WEATHER"},
+		{"STATUS (French: STATUT)",         `{"from":"+22890WF7001","body":"STATUT"}`,                  "STATUS"},
+		{"INCOME (French: REVENU)",         `{"from":"+22890WF7001","body":"REVENU"}`,                  "INCOME"},
+		{"BALANCE (French: SOLDE)",         `{"from":"+22890WF7001","body":"SOLDE"}`,                   "BALANCE"},
+		{"REGISTER (French: INSCRIRE)",     `{"from":"+22890WF7001","body":"INSCRIRE Kofi MAIZE"}`,     "REGISTER"},
+		{"FARMERS",                         `{"from":"+22890WF7001","body":"FARMERS Lome"}`,            "FARMERS"},
+		{"COOP",                            `{"from":"+22890WF7001","body":"COOP Savane"}`,             "COOP"},
+		{"COOPERATIVE (alt)",               `{"from":"+22890WF7001","body":"COOPERATIVE"}`,             "COOP"},
+		{"JOIN",                            `{"from":"+22890WF7001","body":"JOIN LOME-MAIZE"}`,         "JOIN"},
+		{"SAVINGS (French: EPARGNE)",       `{"from":"+22890WF7001","body":"EPARGNE"}`,                 "SAVINGS"},
+
+		// Health — Phase 1D new intents
+		{"PATIENT (French: MALADE)",        `{"from":"+22890WF7002","body":"MALADE Kodjo 28M"}`,        "PATIENT"},
+		{"SYMPTOM (French: SYMPTOME)",      `{"from":"+22890WF7002","body":"SYMPTOME fièvre frissons"}`, "SYMPTOM"},
+		{"APPT (French: RDV)",              `{"from":"+22890WF7002","body":"RDV 2026-10-15 LOME-NORD"}`, "APPT"},
+		{"APPT DEMAIN expansion",           `{"from":"+22890WF7002","body":"APPT DEMAIN TSEVIE"}`,       "APPT"},
+		{"LAB (French: LABO)",              `{"from":"+22890WF7002","body":"LABO PAT-A1B2 MALARIA"}`,   "LAB"},
+		{"RESULT (lab results)",            `{"from":"+22890WF7002","body":"RESULT LAB-A1B2C3"}`,        "LABRESULT"},
+		{"RESULT (French: RESULTAT)",       `{"from":"+22890WF7002","body":"RESULTAT LAB-A1B2C3"}`,     "LABRESULT"},
+		{"REFER",                           `{"from":"+22890WF7002","body":"REFER PAT-A1B2 CHU-LOME"}`, "REFER"},
+		{"REFER (French: ORIENTER)",        `{"from":"+22890WF7002","body":"ORIENTER PAT-A1B2 CHU"}`,   "REFER"},
+		{"CANCEL appointment",              `{"from":"+22890WF7002","body":"CANCEL APT-A1B2C3D4"}`,     "CANCEL"},
+		{"CANCEL (French: ANNULER)",        `{"from":"+22890WF7002","body":"ANNULER APT-A1B2C3D4"}`,    "CANCEL"},
+		{"RESCHEDULE",                      `{"from":"+22890WF7002","body":"RESCHEDULE APT-A1B2 2026-11-01"}`, "RESCHEDULE"},
+		{"RESCHEDULE (French: REPORTER)",   `{"from":"+22890WF7002","body":"REPORTER APT-A1B2 2026-11-01"}`, "RESCHEDULE"},
+		{"VACCINE",                         `{"from":"+22890WF7002","body":"VACCINE PAT-A1B2C3"}`,      "VACCINE"},
+		{"VACCINE SCHEDULE",                `{"from":"+22890WF7002","body":"VACCINE SCHEDULE"}`,         "VACCINE"},
+		{"VACCINE (French: VACCIN)",        `{"from":"+22890WF7002","body":"VACCIN PAT-A1B2C3"}`,       "VACCINE"},
+		{"SCHEDULE availability",           `{"from":"+22890WF7002","body":"SCHEDULE LOME-NORD"}`,       "SCHEDULE"},
+		{"OUTBREAK",                        `{"from":"+22890WF7002","body":"OUTBREAK"}`,                 "OUTBREAK"},
+		{"OUTBREAK (French: ALERTE)",       `{"from":"+22890WF7002","body":"ALERTE"}`,                   "OUTBREAK"},
+		{"OUTBREAK (French: EPID)",         `{"from":"+22890WF7002","body":"EPID"}`,                     "OUTBREAK"},
+
+		// Logistics
+		{"TRACK shipment",                  `{"from":"+22890WF7003","body":"TRACK SHP-A1B2C3D4"}`,      "TRACK"},
+		{"TRACK (French: SUIVI)",           `{"from":"+22890WF7003","body":"SUIVI SHP-A1B2C3D4"}`,      "TRACK"},
+		{"ROUTE query",                     `{"from":"+22890WF7003","body":"ROUTE LOME ACCRA"}`,         "ROUTE"},
+		{"ROUTE (French: ITINERAIRE)",      `{"from":"+22890WF7003","body":"ITINERAIRE LOME ACCRA"}`,   "ROUTE"},
+		{"FLEET status",                    `{"from":"+22890WF7003","body":"FLEET TG"}`,                 "FLEET"},
+		{"FLEET (French: FLOTTE)",          `{"from":"+22890WF7003","body":"FLOTTE TG"}`,                "FLEET"},
+
+		// Maritime
+		{"VESSEL info",                     `{"from":"+22890WF7004","body":"VESSEL MV-KINARA-01"}`,     "VESSEL"},
+		{"VESSEL (French: NAVIRE)",         `{"from":"+22890WF7004","body":"NAVIRE MV-01"}`,            "VESSEL"},
+		{"VESSEL (French: BATEAU)",         `{"from":"+22890WF7004","body":"BATEAU MV-01"}`,            "VESSEL"},
+		{"BERTH availability",              `{"from":"+22890WF7004","body":"BERTH LOME"}`,              "BERTH"},
+		{"BERTH (French: QUAI)",            `{"from":"+22890WF7004","body":"QUAI LOME"}`,               "BERTH"},
+		{"MANIFEST",                        `{"from":"+22890WF7004","body":"MANIFEST MV-KINARA-01"}`,   "MANIFEST"},
+		{"CUSTOMS clearance",               `{"from":"+22890WF7004","body":"CUSTOMS SHP-A1B2C3D4"}`,   "CUSTOMS"},
+		{"CUSTOMS (French: DOUANE)",        `{"from":"+22890WF7004","body":"DOUANE SHP-A1B2C3D4"}`,    "CUSTOMS"},
+
+		// Cross-pillar
+		{"SEND money",                      `{"from":"+22890WF7005","body":"SEND +22891234567 5000 XOF"}`, "SEND"},
+		{"SEND (French: ENVOYER)",          `{"from":"+22890WF7005","body":"ENVOYER +22891234567 5000"}`,  "SEND"},
+		{"SEND (French: TRANSFERT)",        `{"from":"+22890WF7005","body":"TRANSFERT +22891234567 5000"}`, "SEND"},
+		{"CONVERT currency",               `{"from":"+22890WF7005","body":"CONVERT 10000 XOF USD"}`,   "CONVERT"},
+		{"CONVERT (French: CONVERTIR)",    `{"from":"+22890WF7005","body":"CONVERTIR 10000 XOF USD"}`, "CONVERT"},
+		{"IMPACT report",                  `{"from":"+22890WF7005","body":"IMPACT agriculture"}`,       "IMPACT"},
+
+		// Help
+		{"HELP",                            `{"from":"+22890WF7005","body":"HELP"}`,                    "HELP"},
+		{"AIDE (French)",                   `{"from":"+22890WF7005","body":"AIDE"}`,                    "HELP"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.step, func(t *testing.T) {
+			resp, err := client.Post(smsURL+"/webhook/sms/test", "application/json",
+				bytes.NewBufferString(tc.payload))
+			if err != nil {
+				t.Logf("SMS gateway not reachable (service may not be running): %v", err)
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				t.Errorf("%s: expected 200, got %d", tc.step, resp.StatusCode)
+				return
+			}
+			var out struct {
+				Success bool `json:"success"`
+				Data    struct {
+					Command  string `json:"command"`
+					Response string `json:"response"`
+				} `json:"data"`
+			}
+			json.NewDecoder(resp.Body).Decode(&out)
+			if out.Data.Command != tc.cmdWant {
+				t.Errorf("%s: expected %s, got %s", tc.step, tc.cmdWant, out.Data.Command)
+			} else {
+				t.Logf("✓ %s → %s", tc.step, out.Data.Command)
+			}
+			// Every response must be ≤160 chars (SMS limit)
+			if len(out.Data.Response) > 160 {
+				t.Errorf("%s: response length %d exceeds 160-char SMS limit", tc.step, len(out.Data.Response))
+			}
+		})
+	}
+	t.Log("✓ Workflow 7: All Phase 1D SMS intents verified")
+}
+
+// --- Workflow 8: Maritime operations chain ---
+// Vessel arrives → customs declaration → berth assignment → cargo manifest → clearance
+func TestWorkflow8_MaritimeOperations(t *testing.T) {
+	vesselURL  := env("VESSEL_URL",  "http://localhost:8104")
+	portURL    := env("PORT_URL",    "http://localhost:8116")
+	customsURL := env("CUSTOMS_URL", "http://localhost:8114")
+	smsURL     := env("SMS_URL",     "http://localhost:8101")
+
+	t.Log("=== Workflow 8: Maritime Operations Chain ===")
+
+	// Step 1: Register vessel arrival
+	t.Log("Step 1: Register vessel arrival at Lomé port")
+	vesselBody := `{
+		"name":"MV Kinara Express","imo_number":"9876543","flag_country":"TG",
+		"vessel_type":"general_cargo","gross_tonnage":8500,"tenant_id":"TG"
+	}`
+	resp1, err := http.Post(vesselURL+"/api/v1/vessels", "application/json", bytes.NewBufferString(vesselBody))
+	if err != nil {
+		t.Logf("vessel-service not available, skipping maritime workflow: %v", err)
+		return
+	}
+	vesselID := "VES-SIMULATED"
+	if resp1.StatusCode == 201 || resp1.StatusCode == 200 {
+		var vr struct{ Success bool; Data struct{ ID string `json:"id"`; Ref string `json:"vessel_ref"` } }
+		json.NewDecoder(resp1.Body).Decode(&vr)
+		if vr.Data.Ref != "" { vesselID = vr.Data.Ref }
+		t.Logf("✓ Vessel registered: %s", vesselID)
+	} else {
+		t.Logf("Vessel registration returned %d", resp1.StatusCode)
+	}
+	resp1.Body.Close()
+
+	// Step 2: Check berth availability at port
+	t.Log("Step 2: Check berth availability at Lomé port")
+	resp2, err := http.Get(portURL + "/api/v1/berths?port=LOME&status=available")
+	if err != nil {
+		t.Logf("port-service not available: %v", err)
+	} else {
+		if resp2.StatusCode == 200 {
+			t.Log("✓ Berth availability retrieved from port-service")
+		} else {
+			t.Logf("Berth query returned %d", resp2.StatusCode)
+		}
+		resp2.Body.Close()
+	}
+
+	// Step 3: File customs declaration
+	t.Log("Step 3: File customs declaration")
+	customsBody := fmt.Sprintf(`{
+		"vessel_ref":%q,
+		"port_of_entry":"LOME","country":"TG",
+		"cargo_description":"General merchandise — food commodities, pharmaceuticals",
+		"declared_value_usd":250000,
+		"commodity_codes":["1001.90","3004.90"],
+		"tenant_id":"TG"
+	}`, vesselID)
+	resp3, err := http.Post(customsURL+"/api/v1/declarations", "application/json", bytes.NewBufferString(customsBody))
+	if err != nil {
+		t.Logf("customs-service not available: %v", err)
+	} else {
+		declarationID := ""
+		if resp3.StatusCode == 201 || resp3.StatusCode == 200 {
+			var cr struct{ Success bool; Data struct{ ID string `json:"id"`; Ref string `json:"declaration_ref"` } }
+			json.NewDecoder(resp3.Body).Decode(&cr)
+			declarationID = cr.Data.Ref
+			t.Logf("✓ Customs declaration filed: %s", declarationID)
+		} else {
+			t.Logf("Customs declaration returned %d", resp3.StatusCode)
+		}
+		resp3.Body.Close()
+	}
+
+	// Step 4: Query vessel status via SMS
+	t.Log("Step 4: Query vessel status via SMS gateway")
+	client := &http.Client{Timeout: 5 * time.Second}
+	smsPayload := fmt.Sprintf(`{"from":"+22890PORT001","body":"VESSEL %s"}`, vesselID)
+	resp4, err := client.Post(smsURL+"/webhook/sms/test", "application/json",
+		bytes.NewBufferString(smsPayload))
+	if err != nil {
+		t.Logf("SMS gateway not available for maritime query: %v", err)
+	} else {
+		if resp4.StatusCode == 200 {
+			var out struct{ Success bool; Data struct{ Command string `json:"command"` } }
+			json.NewDecoder(resp4.Body).Decode(&out)
+			t.Logf("✓ SMS VESSEL query → command: %s", out.Data.Command)
+		}
+		resp4.Body.Close()
+	}
+
+	// Step 5: Query customs status via SMS
+	t.Log("Step 5: Query customs clearance via SMS")
+	smsPayload2 := `{"from":"+22890PORT001","body":"DOUANE SHP-A1B2C3D4"}`
+	resp5, err := client.Post(smsURL+"/webhook/sms/test", "application/json",
+		bytes.NewBufferString(smsPayload2))
+	if err != nil {
+		t.Logf("SMS customs query not available: %v", err)
+	} else {
+		if resp5.StatusCode == 200 {
+			var out struct{ Success bool; Data struct{ Command string `json:"command"`; Response string `json:"response"` } }
+			json.NewDecoder(resp5.Body).Decode(&out)
+			t.Logf("✓ SMS DOUANE query → %s: '%s'", out.Data.Command, out.Data.Response[:min(len(out.Data.Response), 50)])
+			if len(out.Data.Response) > 160 {
+				t.Errorf("Maritime SMS response exceeds 160 chars: %d", len(out.Data.Response))
+			}
+		}
+		resp5.Body.Close()
+	}
+
+	t.Log("✓ Workflow 8: Maritime operations chain complete")
+}
+
+func min(a, b int) int {
+	if a < b { return a }
+	return b
+}

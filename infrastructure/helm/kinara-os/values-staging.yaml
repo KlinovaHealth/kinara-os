@@ -60,5 +60,12 @@ services:
   lab-service: { enabled: true, port: 8122 }
   outbreak-service: { enabled: true, port: 8123 }
   input-service: { enabled: true, port: 8125 }
-  extension-service: { enabled: true, port: 8126 }
-  vehicle-tracking-service: { enabled: true, port: 8127 }
+  extension-service:            { enabled: true, port: 8126 }
+  vehicle-tracking-service:     { enabled: true, port: 8127 }
+  telemedicine-service:         { enabled: true, port: 8102 }
+  health-analytics-service:     { enabled: true, port: 8109 }
+  health-compliance-service:    { enabled: true, port: 8110 }
+  voyage-service:               { enabled: true, port: 8124 }
+  farmer-finance-service:       { enabled: true, port: 8097 }
+  admin-dashboard-backend:      { enabled: true, port: 8117 }
+  government-dashboard-backend: { enabled: true, port: 8116 }

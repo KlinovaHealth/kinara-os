@@ -106,9 +106,11 @@
 
 <nav>
   <div class="tab active" data-page="overview">Overview</div>
-  <div class="tab" data-page="services">Services (47)</div>
+  <div class="tab" data-page="services">Services (49)</div>
   <div class="tab" data-page="transactions">Transactions</div>
   <div class="tab" data-page="impact">Gates Foundation</div>
+  <div class="tab" data-page="alerts">Alerts <span id="alertBadge" style="background:var(--red);color:#fff;font-size:10px;padding:1px 5px;border-radius:99px;margin-left:4px;display:none">0</span></div>
+  <div class="tab" data-page="users">Admin Users</div>
 </nav>
 
 <main>
@@ -162,6 +164,87 @@
       <table>
         <thead><tr><th>Time</th><th>Service</th><th>Type</th><th>Amount</th><th>Currency</th><th>Status</th></tr></thead>
         <tbody id="txnTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ALERTS & MONITORING -->
+  <div class="page" id="page-alerts">
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi"><div class="kpi-label">Active Alerts</div><div class="kpi-value red" id="al-active">0</div><div class="kpi-sub">requiring attention</div></div>
+      <div class="kpi"><div class="kpi-label">Resolved (24h)</div><div class="kpi-value green" id="al-resolved">0</div><div class="kpi-sub">auto-cleared</div></div>
+      <div class="kpi"><div class="kpi-label">MTTR</div><div class="kpi-value" id="al-mttr">—</div><div class="kpi-sub">mean time to resolve</div></div>
+      <div class="kpi"><div class="kpi-label">On-Call</div><div class="kpi-value" id="al-oncall" style="font-size:16px">—</div><div class="kpi-sub">this week</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Active Alerts</div>
+        <table>
+          <thead><tr><th>Severity</th><th>Service</th><th>Message</th><th>Since</th><th>Action</th></tr></thead>
+          <tbody id="alertsTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">On-Call Rotation</div>
+        <table>
+          <thead><tr><th>Week</th><th>Engineer</th><th>Contact</th><th>Status</th></tr></thead>
+          <tbody id="oncallTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Incident Log (last 7 days)</div>
+      <table>
+        <thead><tr><th>ID</th><th>Service</th><th>Severity</th><th>Started</th><th>Duration</th><th>Resolution</th><th>Status</th></tr></thead>
+        <tbody id="incidentsTable"></tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Alert Rules</div>
+      <table>
+        <thead><tr><th>Rule</th><th>Condition</th><th>Threshold</th><th>Actions</th><th>Enabled</th></tr></thead>
+        <tbody id="rulesTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADMIN USERS & RBAC -->
+  <div class="page" id="page-users">
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi"><div class="kpi-label">Total Users</div><div class="kpi-value green" id="usr-total">—</div><div class="kpi-sub">across all roles</div></div>
+      <div class="kpi"><div class="kpi-label">Active Sessions</div><div class="kpi-value" id="usr-sessions">—</div><div class="kpi-sub">logged in now</div></div>
+      <div class="kpi"><div class="kpi-label">Admins</div><div class="kpi-value yellow" id="usr-admins">—</div><div class="kpi-sub">full access</div></div>
+      <div class="kpi"><div class="kpi-label">Operators</div><div class="kpi-value" id="usr-ops">—</div><div class="kpi-sub">service ops</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">Team Members</div>
+          <button class="btn-primary" onclick="showAddUserForm()">+ Add User</button>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Last Seen</th><th>Status</th></tr></thead>
+          <tbody id="usersTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Roles & Permissions</div>
+        <table>
+          <thead><tr><th>Role</th><th>Permissions</th><th>Users</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-red">system</span></td><td>Emergency override, all services</td><td id="role-system">0</td></tr>
+            <tr><td><span class="badge badge-red">admin</span></td><td>Create users, configure alerts, all dashboards</td><td id="role-admin">0</td></tr>
+            <tr><td><span class="badge badge-yellow">operator</span></td><td>Restart services, view logs, read metrics</td><td id="role-operator">0</td></tr>
+            <tr><td><span class="badge badge-green">viewer</span></td><td>Read-only dashboards, no service ops</td><td id="role-viewer">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Activity Log (Admin Actions)</div>
+      <table>
+        <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Target</th><th>IP</th></tr></thead>
+        <tbody id="activityLog"></tbody>
       </table>
     </div>
   </div>
@@ -243,6 +326,11 @@ function updateUI(data) {
   renderPillarBars(allServices);
   renderServiceGrid(allServices);
   addFeedEvent(data);
+  // Keep alert badge live even when alerts tab not open
+  const downCount = allServices.filter(s => s.status !== 'healthy').length;
+  const badge = document.getElementById('alertBadge');
+  if (downCount > 0) { badge.style.display = 'inline'; badge.textContent = downCount; }
+  else { badge.style.display = 'none'; }
 }
 
 function renderPillarBars(services) {
@@ -365,6 +453,125 @@ function exportReport(fmt) {
   window.open(`${API}/api/admin/gates-report?format=${fmt}`, '_blank');
 }
 
+// --- Alerts & Monitoring ---
+const ALERT_RULES = [
+  { rule: 'Service Down',      condition: 'health != 200',          threshold: '1 failure',  actions: 'PagerDuty + Slack', enabled: true },
+  { rule: 'High Error Rate',   condition: 'error_rate > threshold',  threshold: '> 5%',       actions: 'Slack #kinara-ops',  enabled: true },
+  { rule: 'Payment Failure',   condition: 'payment.status = failed', threshold: '> 3 in 5m',  actions: 'PagerDuty + Email', enabled: true },
+  { rule: 'SMS Backlog',       condition: 'sms.queue_depth > 100',   threshold: '100 msgs',   actions: 'Slack #kinara-ops',  enabled: true },
+  { rule: 'DB Connection Pool',condition: 'db.pool_used > 90%',      threshold: '> 90%',      actions: 'PagerDuty',         enabled: true },
+  { rule: 'Outbreak Detected', condition: 'outbreak.status = active',threshold: 'any active', actions: 'SMS + Email + Gov',  enabled: true },
+];
+
+const ONCALL = [
+  { week: 'Aug 25 – Aug 31', engineer: 'Afi Daglo',    contact: '+1-555-KINARA', status: 'current' },
+  { week: 'Sep 1  – Sep 7',  engineer: 'Kofi Togo',    contact: '+228-9012-3456', status: 'next'    },
+  { week: 'Sep 8  – Sep 14', engineer: 'Amara Diallo',  contact: '+234-812-3456',  status: 'upcoming'},
+];
+
+const INCIDENTS = [
+  { id: 'INC-001', service: 'sms-gateway',    severity: 'medium', started: '2026-08-20 14:22', duration: '12 min', resolution: 'Restarted pod, root cause: memory leak in parser', status: 'resolved' },
+  { id: 'INC-002', service: 'market-service', severity: 'low',    started: '2026-08-22 09:04', duration: '4 min',  resolution: 'DB connection timeout — auto-recovered',              status: 'resolved' },
+  { id: 'INC-003', service: 'patient-service',severity: 'low',    started: '2026-08-27 17:15', duration: '—',      resolution: 'Under investigation',                                 status: 'open'     },
+];
+
+function loadAlerts(services) {
+  const down = (services || allServices).filter(s => s.status !== 'healthy');
+  const activeCount = down.length;
+  document.getElementById('al-active').textContent = activeCount;
+  document.getElementById('al-resolved').textContent = Math.max(0, 5 - activeCount);
+  document.getElementById('al-mttr').textContent = '8 min';
+  document.getElementById('al-oncall').textContent = ONCALL[0].engineer;
+
+  const badge = document.getElementById('alertBadge');
+  if (activeCount > 0) { badge.style.display = 'inline'; badge.textContent = activeCount; }
+  else { badge.style.display = 'none'; }
+
+  const tb = document.getElementById('alertsTable');
+  if (down.length === 0) {
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--green);text-align:center">✓ All services healthy</td></tr>';
+  } else {
+    tb.innerHTML = down.map(s => `<tr>
+      <td><span class="badge badge-red">critical</span></td>
+      <td>${s.name}</td>
+      <td>${s.name} not responding to /health</td>
+      <td>${new Date().toLocaleTimeString()}</td>
+      <td><button class="btn-secondary" style="font-size:11px;padding:3px 8px" onclick="alert('Restart ${s.name}?')">Restart</button></td>
+    </tr>`).join('');
+  }
+
+  document.getElementById('oncallTable').innerHTML = ONCALL.map(o => `<tr>
+    <td>${o.week}</td><td>${o.engineer}</td><td>${o.contact}</td>
+    <td><span class="badge ${o.status==='current'?'badge-green':o.status==='next'?'badge-yellow':'badge-green'}">${o.status}</span></td>
+  </tr>`).join('');
+
+  document.getElementById('incidentsTable').innerHTML = INCIDENTS.map(i => `<tr>
+    <td><code style="font-size:11px">${i.id}</code></td>
+    <td>${i.service}</td>
+    <td><span class="badge ${i.severity==='low'?'badge-yellow':'badge-red'}">${i.severity}</span></td>
+    <td>${i.started}</td><td>${i.duration}</td>
+    <td style="font-size:11px;max-width:200px">${i.resolution}</td>
+    <td><span class="badge ${i.status==='resolved'?'badge-green':'badge-red'}">${i.status}</span></td>
+  </tr>`).join('');
+
+  document.getElementById('rulesTable').innerHTML = ALERT_RULES.map(r => `<tr>
+    <td><strong>${r.rule}</strong></td><td style="font-size:11px;color:var(--muted)">${r.condition}</td>
+    <td>${r.threshold}</td><td style="font-size:11px">${r.actions}</td>
+    <td><span class="badge ${r.enabled?'badge-green':'badge-red'}">${r.enabled?'ON':'OFF'}</span></td>
+  </tr>`).join('');
+}
+
+// --- Admin Users ---
+const USERS = [
+  { name: 'Afi Daglo',     email: 'afi@klinova.co',     role: 'admin',    lastSeen: '2 min ago',  status: 'active'   },
+  { name: 'Kofi Togo',     email: 'kofi@klinova.co',    role: 'operator', lastSeen: '1 hr ago',   status: 'active'   },
+  { name: 'Amara Diallo',  email: 'amara@klinova.co',   role: 'operator', lastSeen: '3 hrs ago',  status: 'active'   },
+  { name: 'Esi Mensah',    email: 'esi@klinova.co',     role: 'viewer',   lastSeen: 'yesterday',  status: 'active'   },
+  { name: 'Gates Monitor', email: 'gates@klinova.co',   role: 'viewer',   lastSeen: '4 days ago', status: 'active'   },
+  { name: 'Togo Ministry', email: 'admin@sante.tg',     role: 'viewer',   lastSeen: '12 hrs ago', status: 'active'   },
+];
+
+const ACTIVITY = [
+  { time: '14:32:01', user: 'Afi Daglo',    action: 'Restarted service',    target: 'patient-service',    ip: '196.28.xx.xx' },
+  { time: '13:15:44', user: 'Kofi Togo',    action: 'Viewed alert details', target: 'INC-003',            ip: '196.28.xx.xx' },
+  { time: '11:02:10', user: 'Afi Daglo',    action: 'Created user account', target: 'esi@klinova.co',     ip: '196.28.xx.xx' },
+  { time: '09:55:30', user: 'Amara Diallo', action: 'Exported CSV report',  target: 'gates-foundation',   ip: '196.28.xx.xx' },
+  { time: 'yesterday','user': 'Afi Daglo',  action: 'Updated alert rule',   target: 'Payment Failure',    ip: '196.28.xx.xx' },
+];
+
+function loadUsers() {
+  const roleCounts = { system:0, admin:0, operator:0, viewer:0 };
+  USERS.forEach(u => roleCounts[u.role] = (roleCounts[u.role]||0)+1);
+
+  document.getElementById('usr-total').textContent = USERS.length;
+  document.getElementById('usr-sessions').textContent = USERS.filter(u=>u.lastSeen.includes('min')||u.lastSeen.includes('hr')).length;
+  document.getElementById('usr-admins').textContent = roleCounts.admin;
+  document.getElementById('usr-ops').textContent = roleCounts.operator;
+  document.getElementById('role-system').textContent = roleCounts.system || 0;
+  document.getElementById('role-admin').textContent = roleCounts.admin;
+  document.getElementById('role-operator').textContent = roleCounts.operator;
+  document.getElementById('role-viewer').textContent = roleCounts.viewer;
+
+  document.getElementById('usersTable').innerHTML = USERS.map(u => `<tr>
+    <td>${u.name}</td><td style="font-size:11px;color:var(--muted)">${u.email}</td>
+    <td><span class="badge ${u.role==='admin'||u.role==='system'?'badge-red':u.role==='operator'?'badge-yellow':'badge-green'}">${u.role}</span></td>
+    <td style="font-size:11px;color:var(--muted)">${u.lastSeen}</td>
+    <td><span class="badge badge-green">${u.status}</span></td>
+  </tr>`).join('');
+
+  document.getElementById('activityLog').innerHTML = ACTIVITY.map(a => `<tr>
+    <td style="font-size:11px;color:var(--muted)">${a.time}</td>
+    <td>${a.user}</td><td>${a.action}</td>
+    <td style="font-size:11px">${a.target}</td>
+    <td style="font-size:11px;color:var(--muted)">${a.ip}</td>
+  </tr>`).join('');
+}
+
+function showAddUserForm() {
+  const name = prompt('New user email:');
+  if (name) alert(`Invite sent to ${name} — they will receive a setup link.`);
+}
+
 // --- Nav tabs ---
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -373,6 +580,8 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     document.getElementById('page-' + tab.dataset.page).classList.add('active');
     if (tab.dataset.page === 'impact') loadGatesReport();
+    if (tab.dataset.page === 'alerts') loadAlerts(allServices);
+    if (tab.dataset.page === 'users') loadUsers();
   });
 });
 

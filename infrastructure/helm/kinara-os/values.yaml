@@ -61,7 +61,25 @@ services:
   pharmacy:       { port: 8117, replicas: 2, maxReplicas: 10, db: kinara_pharmacy }
   referral:       { port: 8118, replicas: 2, maxReplicas: 10, db: kinara_referral }
   voyage:         { port: 8119, replicas: 2, maxReplicas: 10, db: kinara_voyage }
-  sms-gateway:    { port: 8200, replicas: 2, maxReplicas: 10, db: kinara_sms }
+  sms-gateway:          { port: 8101, replicas: 2, maxReplicas: 10, db: kinara_sms }
+  appointment:          { port: 8120, replicas: 2, maxReplicas: 10, db: kinara_appointment }
+  immunization:         { port: 8121, replicas: 2, maxReplicas: 8,  db: kinara_immunization }
+  lab:                  { port: 8122, replicas: 2, maxReplicas: 10, db: kinara_lab }
+  outbreak:             { port: 8123, replicas: 2, maxReplicas: 8,  db: kinara_outbreak }
+  voyage:               { port: 8124, replicas: 2, maxReplicas: 8,  db: kinara_voyage }
+  input:                { port: 8125, replicas: 2, maxReplicas: 8,  db: kinara_input }
+  extension:            { port: 8126, replicas: 2, maxReplicas: 8,  db: kinara_extension }
+  vehicle-tracking:     { port: 8127, replicas: 2, maxReplicas: 10, db: kinara_vehicle_tracking }
+  telemedicine:         { port: 8102, replicas: 2, maxReplicas: 10, db: kinara_telemedicine }
+  health-analytics:     { port: 8109, replicas: 2, maxReplicas: 10, db: kinara_health_analytics }
+  health-compliance:    { port: 8110, replicas: 2, maxReplicas: 8,  db: kinara_health_compliance }
+  audit:                { port: 8111, replicas: 2, maxReplicas: 8,  db: kinara_audit }
+  farmer-finance:       { port: 8097, replicas: 2, maxReplicas: 10, db: kinara_farmer_finance }
+  supply-chain:         { port: 8098, replicas: 2, maxReplicas: 10, db: kinara_supply_chain }
+
+dashboards:
+  admin-backend:        { port: 8117, replicas: 2 }
+  government-backend:   { port: 8116, replicas: 2 }
 
 monitoring:
   prometheus:

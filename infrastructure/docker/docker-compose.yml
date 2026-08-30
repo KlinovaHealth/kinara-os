@@ -476,14 +476,63 @@ services:
     depends_on: [postgres, redis, market-service, weather-service]
 
   # ── ADMIN DASHBOARD ───────────────────────────────────────────────────
-  admin-dashboard:
-    build: ../../dashboard
+  admin-dashboard-backend:
+    build: ../../dashboard/admin/backend
     <<: *service-defaults
     environment:
-      VITE_API_BASE: https://api.kinaraos.com
-      VITE_WS_URL: wss://api.kinaraos.com/ws
+      PORT: "8117"
+      JWT_SECRET: ${JWT_SECRET:-kinara-admin-secret}
+      NODE_ENV: ${NODE_ENV:-production}
     ports:
-      - "3000:3000"
+      - "8117:8117"
+    depends_on: [postgres, redis]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-api.rule=Host(`admin.kinaraos.com`) && PathPrefix(`/api`,`/graphql`,`/ws`)"
+      - "traefik.http.services.admin-api.loadbalancer.server.port=8117"
+
+  admin-dashboard-frontend:
+    image: nginx:alpine
+    <<: *service-defaults
+    volumes:
+      - ../../dashboard/admin/frontend:/usr/share/nginx/html:ro
+    ports:
+      - "3000:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-ui.rule=Host(`admin.kinaraos.com`)"
+      - "traefik.http.services.admin-ui.loadbalancer.server.port=80"
+
+  # ── GOVERNMENT HEALTH DASHBOARD ─────────────────────────────────────
+  government-dashboard-backend:
+    build: ../../dashboard/backend
+    <<: *service-defaults
+    environment:
+      PORT: "8116"
+      NODE_ENV: ${NODE_ENV:-production}
+      HEALTH_ANALYTICS_URL: http://health-analytics-service:8109
+      COMPLIANCE_URL: http://health-compliance-service:8110
+      PATIENT_URL: http://patient-service:8081
+      JWT_SECRET: ${JWT_SECRET:-kinara-admin-secret}
+    ports:
+      - "8116:8116"
+    depends_on: [postgres]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gov-api.rule=Host(`health.kinaraos.tg`) && PathPrefix(`/api`,`/graphql`)"
+      - "traefik.http.services.gov-api.loadbalancer.server.port=8116"
+
+  government-dashboard-frontend:
+    image: nginx:alpine
+    <<: *service-defaults
+    volumes:
+      - ../../dashboard/frontend:/usr/share/nginx/html:ro
+    ports:
+      - "3001:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gov-ui.rule=Host(`health.kinaraos.tg`)"
+      - "traefik.http.services.gov-ui.loadbalancer.server.port=80"
 
   # ── MONITORING ────────────────────────────────────────────────────────
   prometheus:
