@@ -2,7 +2,7 @@ global:
   imageRegistry: ghcr.io/klinovahealth
   imageTag: latest
   imagePullPolicy: Always
-  namespace: kinara-os
+  namespace: kinara-production
   jwtPublicKeyPath: /etc/jwt/public.pem
   imagePullSecrets:
     - name: ghcr-pull-secret
