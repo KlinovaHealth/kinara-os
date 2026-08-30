@@ -2,11 +2,15 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type responseWriter struct {
@@ -56,22 +60,10 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 	}
 }
 
-
-import (
-	"context"
-	"fmt"
-	"net"
-	"net/http"
-	"strconv"
-	"time"
-
-	"github.com/redis/go-redis/v9"
-)
-
 func RateLimit(rdb *redis.Client, maxPerMinute int) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			key := fmt.Sprintf("rl:referral:%s", remoteIP(r))
+			key := fmt.Sprintf("rl:device-registry:%s", remoteIP(r))
 			ctx := context.Background()
 
 			count, err := rdb.Incr(ctx, key).Result()
