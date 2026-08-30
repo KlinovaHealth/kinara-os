@@ -42,7 +42,7 @@ func respond(w http.ResponseWriter, code int, data interface{}) {
 }
 
 func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.CreateDocumentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid request"})
@@ -126,7 +126,7 @@ func (h *Handler) ListDocuments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) IssueDocument(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid id"})
@@ -145,7 +145,7 @@ func (h *Handler) IssueDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RevokeDocument(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid id"})

@@ -59,7 +59,7 @@ func respondErr(w http.ResponseWriter, code int, msg string) {
 }
 
 func (h *DockHandler) CreateOperation(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.CreateOperationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondErr(w, http.StatusBadRequest, "invalid json")
@@ -121,7 +121,7 @@ func (h *DockHandler) ListOperations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DockHandler) StartOperation(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid id"); return }
 	var req models.StartOperationRequest
@@ -144,7 +144,7 @@ func (h *DockHandler) StartOperation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DockHandler) CompleteOperation(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid id"); return }
 	var req models.CompleteOperationRequest
@@ -170,7 +170,7 @@ func (h *DockHandler) CompleteOperation(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *DockHandler) ReportSafetyEvent(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	opID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid operation id"); return }
 	var req models.ReportSafetyEventRequest
@@ -200,7 +200,7 @@ func (h *DockHandler) ReportSafetyEvent(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *DockHandler) CreateEquipment(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	portID, err := uuid.Parse(mux.Vars(r)["port_id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid port_id"); return }
 	var req models.CreateEquipmentRequest

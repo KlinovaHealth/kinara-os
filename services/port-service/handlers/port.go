@@ -63,7 +63,7 @@ func respondErr(w http.ResponseWriter, code int, msg string) {
 }
 
 func (h *PortHandler) CreatePort(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.CreatePortRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondErr(w, http.StatusBadRequest, "invalid json")
@@ -107,7 +107,7 @@ func (h *PortHandler) ListPorts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PortHandler) CreateBerth(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	portID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid port id"); return }
 	var req models.CreateBerthRequest
@@ -169,7 +169,7 @@ func (h *PortHandler) UpdateBerthStatus(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *PortHandler) ScheduleBerth(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	berthID, err := uuid.Parse(mux.Vars(r)["berth_id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid berth id"); return }
 	var req models.ScheduleBerthRequest
@@ -229,7 +229,7 @@ func (h *PortHandler) UpdateScheduleStatus(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *PortHandler) CreateAlert(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	portID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid port id"); return }
 	var req models.CreateAlertRequest

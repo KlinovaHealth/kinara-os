@@ -54,7 +54,7 @@ func respond(w http.ResponseWriter, code int, data interface{}) {
 }
 
 func (h *Handler) RecordImpact(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.RecordImpactRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid request"})
@@ -107,7 +107,7 @@ func (h *Handler) ListImpact(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateSummary(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.CreateSummaryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid request"})
@@ -172,7 +172,7 @@ func (h *Handler) ListSummaries(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.GenerateReportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid request"})
@@ -228,7 +228,7 @@ func (h *Handler) ListReports(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ReportBottleneck(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.ReportBottleneckRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid request"})

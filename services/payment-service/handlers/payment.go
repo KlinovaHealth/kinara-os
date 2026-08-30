@@ -59,7 +59,7 @@ func newTxnRef() string {
 }
 
 func (h *Handler) CreateWallet(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.CreateWalletRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid request"})
@@ -107,7 +107,7 @@ func (h *Handler) GetWallet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreditWallet(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid id"})
@@ -141,7 +141,7 @@ func (h *Handler) CreditWallet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DebitWallet(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid id"})
@@ -196,7 +196,7 @@ func (h *Handler) ListTransactions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ConvertCurrency(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.ConvertCurrencyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid request"})
@@ -276,7 +276,7 @@ type createSettlementBody struct {
 }
 
 func (h *Handler) CreateSettlement(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	bodyBytes, _ := io.ReadAll(r.Body)
 	var req createSettlementBody
 	if err := json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&req); err != nil {
@@ -333,7 +333,7 @@ func (h *Handler) GetSettlement(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ConfirmSettlement(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		respond(w, 400, models.APIResponse{Error: "invalid id"})

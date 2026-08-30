@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/klinova/kinara-os/crew-service/auth"
 	"github.com/klinova/kinara-os/crew-service/db"
 	"github.com/klinova/kinara-os/crew-service/handlers"
 	"github.com/klinova/kinara-os/crew-service/middleware"
@@ -25,9 +26,15 @@ func main() {
 	}
 	defer pool.Close()
 
+	jwtValidator, err := auth.NewValidator(os.Getenv("JWT_PUBLIC_KEY"))
+	if err != nil {
+		logger.Error("failed to load JWT public key", "error", err)
+		os.Exit(1)
+	}
+
 	h := handlers.New(db.New(pool))
 	r := mux.NewRouter()
-	r.Use(middleware.JWT(os.Getenv("JWT_PUBLIC_KEY")))
+	r.Use(middleware.JWT(jwtValidator))
 	r.Use(middleware.Logging(logger))
 	h.Register(r)
 	r.Handle("/metrics", promhttp.Handler())

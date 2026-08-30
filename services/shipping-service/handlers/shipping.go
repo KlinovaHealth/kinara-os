@@ -56,7 +56,7 @@ func respondErr(w http.ResponseWriter, code int, msg string) {
 }
 
 func (h *ShippingHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.CreateBookingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondErr(w, http.StatusBadRequest, "invalid json")
@@ -121,7 +121,7 @@ func (h *ShippingHandler) ListBookings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ShippingHandler) UpdateBookingStatus(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid id"); return }
 	var req struct{ Status string `json:"status"` }
@@ -140,7 +140,7 @@ func (h *ShippingHandler) UpdateBookingStatus(w http.ResponseWriter, r *http.Req
 }
 
 func (h *ShippingHandler) IssueBOL(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	bookingID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid booking id"); return }
 	var req models.IssueBOLRequest
@@ -183,7 +183,7 @@ func (h *ShippingHandler) GetBOL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ShippingHandler) SurrenderBOL(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["bol_id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid bol id"); return }
 	now := time.Now().UTC()
@@ -197,7 +197,7 @@ func (h *ShippingHandler) SurrenderBOL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ShippingHandler) RecordDemurrage(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	bookingID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid booking id"); return }
 	var req models.RecordDemurrageRequest

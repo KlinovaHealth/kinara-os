@@ -58,7 +58,7 @@ func respondErr(w http.ResponseWriter, code int, msg string) {
 }
 
 func (h *CargoMaritimeHandler) RegisterContainer(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.RegisterContainerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondErr(w, http.StatusBadRequest, "invalid json")
@@ -106,7 +106,7 @@ func (h *CargoMaritimeHandler) ListContainers(w http.ResponseWriter, r *http.Req
 }
 
 func (h *CargoMaritimeHandler) UpdateContainerStatus(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid id"); return }
 	var req models.UpdateContainerStatusRequest
@@ -128,7 +128,7 @@ func (h *CargoMaritimeHandler) UpdateContainerStatus(w http.ResponseWriter, r *h
 }
 
 func (h *CargoMaritimeHandler) ReportDamage(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	containerID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid container id"); return }
 	var req models.ReportDamageRequest
@@ -171,7 +171,7 @@ func (h *CargoMaritimeHandler) ListDamageReports(w http.ResponseWriter, r *http.
 }
 
 func (h *CargoMaritimeHandler) CreateManifest(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	var req models.CreateManifestRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondErr(w, http.StatusBadRequest, "invalid json")
@@ -212,7 +212,7 @@ func (h *CargoMaritimeHandler) GetManifest(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *CargoMaritimeHandler) AddContainerToManifest(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	manifestID, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid manifest id"); return }
 	var req models.AddContainerToManifestRequest
@@ -235,7 +235,7 @@ func (h *CargoMaritimeHandler) AddContainerToManifest(w http.ResponseWriter, r *
 }
 
 func (h *CargoMaritimeHandler) FinalizeManifest(w http.ResponseWriter, r *http.Request) {
-	claims, _ := middleware.ClaimsFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil { respondErr(w, http.StatusBadRequest, "invalid manifest id"); return }
 	now := time.Now().UTC()

@@ -16,13 +16,70 @@ BACKUP_DIR="/tmp/kinara-backup-${TIMESTAMP}"
 mkdir -p "$BACKUP_DIR"
 
 DATABASES=(
-  kinara_patient
-  kinara_cooperative
-  kinara_logistics
-  kinara_maritime
-  kinara_payment
-  kinara_analytics
+  # Core / identity
+  kinara_auth
   kinara_audit
+  kinara_notification
+
+  # Health
+  kinara_patient
+  kinara_clinical
+  kinara_appointment
+  kinara_immunization
+  kinara_lab
+  kinara_outbreak
+  kinara_pharmacy
+  kinara_referral
+  kinara_telemedicine
+  kinara_health_analytics
+  kinara_health_compliance
+
+  # Agriculture
+  kinara_farmer
+  kinara_market
+  kinara_cooperative
+  kinara_weather
+  kinara_input
+  kinara_extension
+  kinara_irrigation
+  kinara_livestock
+  kinara_farmer_finance
+
+  # Logistics
+  kinara_fleet
+  kinara_driver
+  kinara_cargo
+  kinara_route
+  kinara_transport
+  kinara_lastmile
+  kinara_shipment
+  kinara_logistics_analytics
+  kinara_vehicle_tracking
+  kinara_supply_chain
+  kinara_warehouse
+
+  # Maritime
+  kinara_port
+  kinara_vessel
+  kinara_dock
+  kinara_cargo_maritime
+  kinara_customs
+  kinara_shipping
+  kinara_crew
+  kinara_voyage
+
+  # Trade / finance
+  kinara_payment
+  kinara_trade_finance
+  kinara_documentation
+  kinara_compliance
+
+  # Analytics / governance
+  kinara_analytics
+  kinara_governance
+
+  # SMS
+  kinara_sms
 )
 
 echo "[backup] Starting Kinara database backup at ${TIMESTAMP}"
