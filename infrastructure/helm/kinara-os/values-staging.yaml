@@ -211,3 +211,5 @@ services:
   export:                { port: 8718, replicas: 1, maxReplicas: 3, db: kinara_export }
   feedback:              { port: 8719, replicas: 1, maxReplicas: 3, db: kinara_feedback }
   integration:           { port: 8720, replicas: 1, maxReplicas: 3, db: kinara_integration }
+  device-registry:       { port: 8721, replicas: 1, maxReplicas: 3, db: kinara_auth }
+  offline-sync:          { port: 8722, replicas: 1, maxReplicas: 3, db: kinara_auth }
