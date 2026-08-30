@@ -85,7 +85,7 @@ func main() {
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := mux.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.Logging(slog.Default()))
+	r.Use(middleware.Logging)
 	r.Use(middleware.RateLimit(rdb, 1000))
 
 	// Health endpoints require no auth (checked by Kubernetes liveness probes).
