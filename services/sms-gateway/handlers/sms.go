@@ -182,7 +182,7 @@ func (h *Handler) TestSMS(w http.ResponseWriter, r *http.Request) {
 		From string `json:"from"`
 		Body string `json:"body"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.From == "" || req.Body == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.From == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.APIResponse{Error: "from and body required"})

@@ -10,10 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type contextKey string
-
-const ContextKeyRequestID contextKey = "request_id"
-
 type responseWriter struct {
 	http.ResponseWriter
 	status int
