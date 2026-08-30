@@ -343,8 +343,6 @@ func TestWorkflow1_PatientCareEpisode(t *testing.T) {
 
 	// Step 1: Register patient
 	t.Log("Step 1: Register patient")
-	code, r := apiCall(t, "POST", "", "", "")
-	_ = code
 	resp1, err := http.Post(patientURL+"/api/v1/patients", "application/json",
 		bytes.NewBufferString(`{"first_name":"Komi","last_name":"Workflow","date_of_birth":"1985-03-20",
 		"gender":"male","phone":"+22890WF0001","country":"TG","blood_type":"A+","tenant_id":"TG"}`))
@@ -404,7 +402,6 @@ func TestWorkflow1_PatientCareEpisode(t *testing.T) {
 	}
 
 	t.Log("✓ Workflow 1: Patient care episode complete")
-	_ = r
 }
 
 // --- Workflow 2: Clinic-to-clinic referral ---
