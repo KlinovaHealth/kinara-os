@@ -73,6 +73,116 @@ services:
   warehouse:           { port: 8104, replicas: 2, maxReplicas: 15, db: kinara_warehouse }
   weather:             { port: 8088, replicas: 2, maxReplicas: 8,  db: kinara_weather }
 
+  # ── Health Pillar (new) ───────────────────────────────────────────────────
+  prescription:          { port: 8301, replicas: 2, maxReplicas: 10, db: kinara_prescription }
+  vital-signs:           { port: 8302, replicas: 2, maxReplicas: 10, db: kinara_vital_signs }
+  symptom:               { port: 8303, replicas: 2, maxReplicas: 10, db: kinara_symptom }
+  disease-surveillance:  { port: 8304, replicas: 2, maxReplicas: 10, db: kinara_disease_surveillance }
+  maternal-health:       { port: 8305, replicas: 2, maxReplicas: 10, db: kinara_maternal_health }
+  child-health:          { port: 8306, replicas: 2, maxReplicas: 10, db: kinara_child_health }
+  nutrition:             { port: 8307, replicas: 2, maxReplicas: 10, db: kinara_nutrition }
+  mental-health:         { port: 8308, replicas: 2, maxReplicas: 10, db: kinara_mental_health }
+  chronic-disease:       { port: 8309, replicas: 2, maxReplicas: 10, db: kinara_chronic_disease }
+  emergency:             { port: 8310, replicas: 2, maxReplicas: 10, db: kinara_emergency }
+  patient-monitoring:    { port: 8311, replicas: 2, maxReplicas: 10, db: kinara_patient_monitoring }
+  medical-history:       { port: 8312, replicas: 2, maxReplicas: 10, db: kinara_medical_history }
+  allergy:               { port: 8313, replicas: 2, maxReplicas: 10, db: kinara_allergy }
+  medication:            { port: 8314, replicas: 2, maxReplicas: 10, db: kinara_medication }
+  health-education:      { port: 8315, replicas: 2, maxReplicas: 10, db: kinara_health_education }
+  population-health:     { port: 8316, replicas: 2, maxReplicas: 10, db: kinara_population_health }
+  outcome-tracking:      { port: 8317, replicas: 2, maxReplicas: 10, db: kinara_outcome_tracking }
+  patient-engagement:    { port: 8318, replicas: 2, maxReplicas: 10, db: kinara_patient_engagement }
+  reminders:             { port: 8319, replicas: 2, maxReplicas: 10, db: kinara_reminders }
+  screening:             { port: 8320, replicas: 2, maxReplicas: 10, db: kinara_screening }
+  surgery:               { port: 8321, replicas: 2, maxReplicas: 10, db: kinara_surgery }
+  radiology:             { port: 8322, replicas: 2, maxReplicas: 10, db: kinara_radiology }
+  pathology:             { port: 8323, replicas: 2, maxReplicas: 10, db: kinara_pathology }
+  infection-control:     { port: 8324, replicas: 2, maxReplicas: 10, db: kinara_infection_control }
+  health-worker:         { port: 8325, replicas: 2, maxReplicas: 10, db: kinara_health_worker }
+
+  # ── Agriculture Pillar (new) ──────────────────────────────────────────────
+  crop:                  { port: 8401, replicas: 2, maxReplicas: 10, db: kinara_crop }
+  farm-plot:             { port: 8402, replicas: 2, maxReplicas: 10, db: kinara_farm_plot }
+  seed:                  { port: 8403, replicas: 2, maxReplicas: 10, db: kinara_seed }
+  fertilizer:            { port: 8404, replicas: 2, maxReplicas: 10, db: kinara_fertilizer }
+  pest-management:       { port: 8405, replicas: 2, maxReplicas: 10, db: kinara_pest_management }
+  harvest:               { port: 8406, replicas: 2, maxReplicas: 10, db: kinara_harvest }
+  agri-storage:          { port: 8407, replicas: 2, maxReplicas: 10, db: kinara_agri_storage }
+  commodity-pricing:     { port: 8408, replicas: 2, maxReplicas: 10, db: kinara_commodity_pricing }
+  yield:                 { port: 8409, replicas: 2, maxReplicas: 10, db: kinara_yield }
+  soil:                  { port: 8410, replicas: 2, maxReplicas: 10, db: kinara_soil }
+  agri-forecast:         { port: 8411, replicas: 2, maxReplicas: 10, db: kinara_agri_forecast }
+  subsidy:               { port: 8412, replicas: 2, maxReplicas: 10, db: kinara_subsidy }
+  agri-training:         { port: 8413, replicas: 2, maxReplicas: 10, db: kinara_agri_training }
+  agri-insurance:        { port: 8414, replicas: 2, maxReplicas: 10, db: kinara_agri_insurance }
+  agri-credit:           { port: 8415, replicas: 2, maxReplicas: 10, db: kinara_agri_credit }
+  agri-export:           { port: 8416, replicas: 2, maxReplicas: 10, db: kinara_agri_export }
+  agri-certification:    { port: 8417, replicas: 2, maxReplicas: 10, db: kinara_agri_certification }
+  water-management:      { port: 8418, replicas: 2, maxReplicas: 10, db: kinara_water_management }
+  agri-equipment:        { port: 8419, replicas: 2, maxReplicas: 10, db: kinara_agri_equipment }
+  land-registry:         { port: 8420, replicas: 2, maxReplicas: 10, db: kinara_land_registry }
+
+  # ── Logistics Pillar (new) ────────────────────────────────────────────────
+  inventory:             { port: 8501, replicas: 2, maxReplicas: 10, db: kinara_inventory }
+  delivery:              { port: 8502, replicas: 2, maxReplicas: 10, db: kinara_delivery }
+  packaging:             { port: 8503, replicas: 2, maxReplicas: 10, db: kinara_packaging }
+  quality-check:         { port: 8504, replicas: 2, maxReplicas: 10, db: kinara_quality_check }
+  returns:               { port: 8505, replicas: 2, maxReplicas: 10, db: kinara_returns }
+  demand-forecast:       { port: 8506, replicas: 2, maxReplicas: 10, db: kinara_demand_forecast }
+  cold-chain:            { port: 8507, replicas: 2, maxReplicas: 10, db: kinara_cold_chain }
+  carrier:               { port: 8508, replicas: 2, maxReplicas: 10, db: kinara_carrier }
+  dispatch:              { port: 8509, replicas: 2, maxReplicas: 10, db: kinara_dispatch }
+  freight:               { port: 8510, replicas: 2, maxReplicas: 10, db: kinara_freight }
+  geo-fence:             { port: 8511, replicas: 2, maxReplicas: 10, db: kinara_geo_fence }
+  fuel-management:       { port: 8512, replicas: 2, maxReplicas: 10, db: kinara_fuel_management }
+  vehicle-maintenance:   { port: 8513, replicas: 2, maxReplicas: 10, db: kinara_vehicle_maintenance }
+  toll:                  { port: 8514, replicas: 2, maxReplicas: 10, db: kinara_toll }
+  logistics-reporting:   { port: 8515, replicas: 2, maxReplicas: 10, db: kinara_logistics_reporting }
+  cross-docking:         { port: 8516, replicas: 2, maxReplicas: 10, db: kinara_cross_docking }
+  load-planning:         { port: 8517, replicas: 2, maxReplicas: 10, db: kinara_load_planning }
+  returns-management:    { port: 8518, replicas: 2, maxReplicas: 10, db: kinara_returns_management }
+  logistics-compliance:  { port: 8519, replicas: 2, maxReplicas: 10, db: kinara_logistics_compliance }
+  sorting:               { port: 8520, replicas: 2, maxReplicas: 10, db: kinara_sorting }
+
+  # ── Maritime Pillar (new) ─────────────────────────────────────────────────
+  berth:                 { port: 8601, replicas: 2, maxReplicas: 10, db: kinara_berth }
+  manifest:              { port: 8602, replicas: 2, maxReplicas: 10, db: kinara_manifest }
+  bill-of-lading:        { port: 8603, replicas: 2, maxReplicas: 10, db: kinara_bill_of_lading }
+  maritime-insurance:    { port: 8604, replicas: 2, maxReplicas: 10, db: kinara_maritime_insurance }
+  tariff:                { port: 8605, replicas: 2, maxReplicas: 10, db: kinara_tariff }
+  port-authority:        { port: 8606, replicas: 2, maxReplicas: 10, db: kinara_port_authority }
+  maritime-agent:        { port: 8607, replicas: 2, maxReplicas: 10, db: kinara_maritime_agent }
+  marine-inspection:     { port: 8608, replicas: 2, maxReplicas: 10, db: kinara_marine_inspection }
+  vessel-certification:  { port: 8609, replicas: 2, maxReplicas: 10, db: kinara_vessel_certification }
+  maritime-analytics:    { port: 8610, replicas: 2, maxReplicas: 10, db: kinara_maritime_analytics }
+  pilotage:              { port: 8611, replicas: 2, maxReplicas: 10, db: kinara_pilotage }
+  stevedore:             { port: 8612, replicas: 2, maxReplicas: 10, db: kinara_stevedore }
+  maritime-weather:      { port: 8613, replicas: 2, maxReplicas: 10, db: kinara_maritime_weather }
+  sanctions-check:       { port: 8614, replicas: 2, maxReplicas: 10, db: kinara_sanctions_check }
+  freight-forwarding:    { port: 8615, replicas: 2, maxReplicas: 10, db: kinara_freight_forwarding }
+
+  # ── Finance & Cross-cutting (new) ─────────────────────────────────────────
+  invoice:               { port: 8701, replicas: 2, maxReplicas: 10, db: kinara_invoice }
+  billing:               { port: 8702, replicas: 2, maxReplicas: 10, db: kinara_billing }
+  tax:                   { port: 8703, replicas: 2, maxReplicas: 10, db: kinara_tax }
+  expense:               { port: 8704, replicas: 2, maxReplicas: 10, db: kinara_expense }
+  budget:                { port: 8705, replicas: 2, maxReplicas: 10, db: kinara_budget }
+  loan:                  { port: 8706, replicas: 2, maxReplicas: 10, db: kinara_loan }
+  credit-scoring:        { port: 8707, replicas: 2, maxReplicas: 10, db: kinara_credit_scoring }
+  settlement:            { port: 8708, replicas: 2, maxReplicas: 10, db: kinara_settlement }
+  reconciliation:        { port: 8709, replicas: 2, maxReplicas: 10, db: kinara_reconciliation }
+  ledger:                { port: 8710, replicas: 2, maxReplicas: 10, db: kinara_ledger }
+  reporting:             { port: 8711, replicas: 2, maxReplicas: 10, db: kinara_reporting }
+  user-management:       { port: 8712, replicas: 2, maxReplicas: 10, db: kinara_user_management }
+  tenant:                { port: 8713, replicas: 2, maxReplicas: 10, db: kinara_tenant }
+  configuration:         { port: 8714, replicas: 2, maxReplicas: 10, db: kinara_configuration }
+  translation:           { port: 8715, replicas: 2, maxReplicas: 10, db: kinara_translation }
+  media:                 { port: 8716, replicas: 2, maxReplicas: 10, db: kinara_media }
+  search:                { port: 8717, replicas: 2, maxReplicas: 10, db: kinara_search }
+  export:                { port: 8718, replicas: 2, maxReplicas: 10, db: kinara_export }
+  feedback:              { port: 8719, replicas: 2, maxReplicas: 10, db: kinara_feedback }
+  integration:           { port: 8720, replicas: 2, maxReplicas: 10, db: kinara_integration }
+
 monitoring:
   prometheus:
     enabled: true
