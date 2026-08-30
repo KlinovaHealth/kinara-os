@@ -16,6 +16,8 @@ import (
 	"github.com/klinova/kinara-os/payment-service/db"
 	"github.com/klinova/kinara-os/payment-service/handlers"
 	"github.com/klinova/kinara-os/payment-service/middleware"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -33,11 +35,12 @@ func main() {
 
 	queries := db.New(pool)
 	h := handlers.NewHandler(queries)
+	rdb := redis.NewClient(&redis.Options{Addr: os.Getenv("REDIS_URL")})
 	r := mux.NewRouter()
 	r.Use(middleware.Logging(slog.Default()))
-	r.Use(middleware.RateLimit(os.Getenv("REDIS_URL"), "payment-service", 500, time.Minute))
+	r.Use(middleware.RateLimit(rdb, 500))
 	api := r.PathPrefix("/api/v1").Subrouter()
-	api.Use(middleware.JWTAuth(jwtValidator))
+	api.Use(middleware.JWT(jwtValidator))
 	h.RegisterRoutes(api)
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {

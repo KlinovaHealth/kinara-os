@@ -48,8 +48,8 @@ func (h *Handler) Register(r *mux.Router) {
 // ─── POST /api/v1/patients ────────────────────────────────────────────────────
 
 func (h *Handler) CreatePatient(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.ClaimsFromContext(r.Context())
-	if claims == nil {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
 		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing auth context")
 		return
 	}
@@ -214,8 +214,8 @@ func (h *Handler) CreatePatient(w http.ResponseWriter, r *http.Request) {
 // ─── GET /api/v1/patients/:id ─────────────────────────────────────────────────
 
 func (h *Handler) GetPatient(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.ClaimsFromContext(r.Context())
-	if claims == nil {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
 		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing auth context")
 		return
 	}
@@ -263,8 +263,8 @@ func (h *Handler) GetPatient(w http.ResponseWriter, r *http.Request) {
 // ─── GET /api/v1/patients ─────────────────────────────────────────────────────
 
 func (h *Handler) ListPatients(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.ClaimsFromContext(r.Context())
-	if claims == nil {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
 		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing auth context")
 		return
 	}
@@ -330,8 +330,8 @@ func (h *Handler) ListPatients(w http.ResponseWriter, r *http.Request) {
 // ─── PUT /api/v1/patients/:id ─────────────────────────────────────────────────
 
 func (h *Handler) UpdatePatient(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.ClaimsFromContext(r.Context())
-	if claims == nil {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
 		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing auth context")
 		return
 	}
@@ -448,8 +448,8 @@ func (h *Handler) UpdatePatient(w http.ResponseWriter, r *http.Request) {
 // ─── DELETE /api/v1/patients/:id ──────────────────────────────────────────────
 
 func (h *Handler) DeletePatient(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.ClaimsFromContext(r.Context())
-	if claims == nil {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
 		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing auth context")
 		return
 	}
@@ -492,8 +492,8 @@ func (h *Handler) DeletePatient(w http.ResponseWriter, r *http.Request) {
 // ─── GET /api/v1/patients/:id/audit ──────────────────────────────────────────
 
 func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.ClaimsFromContext(r.Context())
-	if claims == nil {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
 		respondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing auth context")
 		return
 	}

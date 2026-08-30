@@ -13,6 +13,8 @@ import (
 	"github.com/klinova/kinara-os/shipping-service/db"
 	"github.com/klinova/kinara-os/shipping-service/handlers"
 	"github.com/klinova/kinara-os/shipping-service/middleware"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -33,10 +35,11 @@ func main() {
 	queries := db.New(pool)
 	h := handlers.NewHandler(queries)
 
+	rdb := redis.NewClient(&redis.Options{Addr: os.Getenv("REDIS_URL")})
 	r := mux.NewRouter()
 	r.Use(middleware.Logging(slog.Default()))
-	r.Use(middleware.RateLimit(os.Getenv("REDIS_URL"), "shipping-service", 300))
-	r.Use(middleware.Auth(jwtValidator))
+	r.Use(middleware.RateLimit(rdb, 300))
+	r.Use(middleware.JWT(jwtValidator))
 
 	api := r.PathPrefix("/api/v1").Subrouter()
 	h.RegisterRoutes(api)

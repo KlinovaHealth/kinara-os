@@ -118,6 +118,7 @@ type CreateListingRequest struct {
 	QualityGrade   string    `json:"quality_grade"`
 	Market         string    `json:"market"`
 	Region         string    `json:"region"`
+	Country        string    `json:"country"`
 	HarvestedAt    *string   `json:"harvested_at,omitempty"`
 	AvailableFrom  string    `json:"available_from"`
 	AvailableUntil *string   `json:"available_until,omitempty"`
