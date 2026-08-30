@@ -55,9 +55,17 @@ func main() {
 	}
 	defer pool.Close()
 
-	if err := pool.Ping(context.Background()); err != nil {
-		logger.Error("database ping failed", "error", err)
-		os.Exit(1)
+	// Retry ping with backoff so services don't stampede the DB connection pool at startup.
+	for attempt := 1; attempt <= 10; attempt++ {
+		if err := pool.Ping(context.Background()); err == nil {
+			break
+		} else if attempt == 10 {
+			logger.Error("database ping failed after retries", "error", err)
+			os.Exit(1)
+		} else {
+			logger.Warn("database ping failed, retrying", "attempt", attempt, "error", err)
+			time.Sleep(time.Duration(attempt*2) * time.Second)
+		}
 	}
 
 	// Patient service URL for cross-service data pull
