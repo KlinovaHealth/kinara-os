@@ -40,3 +40,12 @@ CREATE DATABASE kinara_payment;
 CREATE DATABASE kinara_documentation;
 CREATE DATABASE kinara_analytics;
 CREATE DATABASE kinara_sms;
+-- New databases added Phase 1A/1C
+CREATE DATABASE kinara_telemedicine;
+CREATE DATABASE kinara_farmer_finance;
+CREATE DATABASE kinara_supply_chain;
+CREATE DATABASE kinara_extension;
+CREATE DATABASE kinara_vehicle_tracking;
+CREATE DATABASE kinara_audit;
+CREATE DATABASE kinara_health_analytics;
+CREATE DATABASE kinara_health_compliance;
