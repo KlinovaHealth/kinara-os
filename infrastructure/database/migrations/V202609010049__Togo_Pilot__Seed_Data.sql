@@ -1,12 +1,45 @@
--- V049: Togo Pilot Seed Data
+-- V049: Togo Pilot Seed Data (schema-aligned)
 -- Seeds 100 clinics, 1000 patients, 500 farmers, 10 ports, FX rates,
--- 5 cooperatives, and initial market prices for the Oct 2026 Togo pilot.
+-- 10 cooperatives, and initial market prices for the Oct 2026 Togo pilot.
 -- All inserts are idempotent (ON CONFLICT DO NOTHING).
+--
+-- PHI columns (full_name_enc, phone_enc, national_id_enc, etc.) use
+-- SHA-256 placeholder ciphertext. Real AES-256-GCM ciphertext must be
+-- written by the application layer — these values satisfy NOT NULL
+-- constraints and make the schema testable without real PHI.
 
 -- ═══════════════════════════════════════════════════════
--- SECTION 1: kinara_patient — Clinics (100 Togolese sites)
+-- SECTION 0: kinara_patient — create clinics registry table
+-- clinics do not have their own service migration; they are anchored
+-- in kinara_patient as the primary health-facility reference entity.
 -- ═══════════════════════════════════════════════════════
 \c kinara_patient;
+
+CREATE TABLE IF NOT EXISTS clinics (
+    id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    name           TEXT        NOT NULL,
+    phone          TEXT,
+    address        TEXT,
+    region         TEXT,
+    country        TEXT        NOT NULL,
+    clinic_type    TEXT        NOT NULL DEFAULT 'health_center'
+                   CHECK (clinic_type IN (
+                       'health_center','district','prefectoral','regional',
+                       'university','dispensary','health_post','private',
+                       'community','maternity'
+                   )),
+    capacity_beds  INT         NOT NULL DEFAULT 0,
+    is_active      BOOLEAN     NOT NULL DEFAULT true,
+    tenant_id      TEXT        NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_clinics_country_region ON clinics(country, region);
+CREATE INDEX IF NOT EXISTS idx_clinics_tenant         ON clinics(tenant_id);
+
+-- ═══════════════════════════════════════════════════════
+-- SECTION 1: kinara_patient — 100 Togolese clinic sites
+-- ═══════════════════════════════════════════════════════
 
 INSERT INTO clinics (id, name, phone, address, region, country, clinic_type, capacity_beds, is_active, tenant_id, created_at) VALUES
   (gen_random_uuid(), 'Centre de Santé de Lomé-Nord',         '+22890001001', '12 Rue des Cliniques, Lomé',              'Maritime',  'TG', 'health_center',  30, true, 'TG', NOW()),
@@ -59,7 +92,6 @@ INSERT INTO clinics (id, name, phone, address, region, country, clinic_type, cap
   (gen_random_uuid(), 'Centre de Santé de Bombouaka',         '+22890001048', '4 Rue de Bombouaka, Bombouaka',           'Savanes',   'TG', 'health_center',  13, true, 'TG', NOW()),
   (gen_random_uuid(), 'Dispensaire de Oti',                   '+22890001049', '1 Rue du Dispensaire, Oti',               'Savanes',   'TG', 'dispensary',      6, true, 'TG', NOW()),
   (gen_random_uuid(), 'Centre de Santé de Bogou',             '+22890001050', '7 Rue Principale, Bogou',                 'Savanes',   'TG', 'health_center',  10, true, 'TG', NOW()),
-  -- Clinics 51–100: community health posts across all regions
   (gen_random_uuid(), 'Poste de Santé de Dévégo',             '+22890001051', 'Dévégo, Maritime',                        'Maritime',  'TG', 'health_post',     4, true, 'TG', NOW()),
   (gen_random_uuid(), 'Poste de Santé de Hahotoé',            '+22890001052', 'Hahotoé, Maritime',                       'Maritime',  'TG', 'health_post',     4, true, 'TG', NOW()),
   (gen_random_uuid(), 'Poste de Santé de Baguida',            '+22890001053', 'Baguida, Maritime',                       'Maritime',  'TG', 'health_post',     5, true, 'TG', NOW()),
@@ -114,7 +146,9 @@ ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
 -- SECTION 2: kinara_patient — 1,000 test patients
--- Uses generate_series for efficiency; distributed across 100 clinics.
+-- PHI columns use SHA-256 placeholder ciphertext.
+-- Does not reference clinic_id (not in V001 patients schema);
+-- clinic association is managed via tenant_id at the app layer.
 -- ═══════════════════════════════════════════════════════
 
 WITH
@@ -133,28 +167,35 @@ last_names(arr) AS (SELECT ARRAY[
   'Bessa','Creppy','Dankwa','Edoh','Gbati','Hagan','Iddi','Kudjo','Mante','Agbobli',
   'Bodjona','Chabi','Dakarai','Edjam','Fonvono','Gameli','Habia','Ikadifo','Jibril','Kazankpe',
   'Lomtchieu','Mogbante','Nakounou','Ogou','Payadou','Radimon','Sagna','Tchamdja','Ugoh','Valvo'
-]),
-clinic_ids AS (
-    SELECT id, row_number() OVER (ORDER BY created_at) AS rn FROM clinics WHERE country = 'TG'
-)
+])
 INSERT INTO patients (
-    id, patient_ref, first_name, last_name, date_of_birth, gender,
-    blood_type, phone, country, tenant_id, clinic_id, is_active, created_at
+    id,
+    national_id_enc,
+    full_name_enc,
+    date_of_birth_enc,
+    phone_number_enc,
+    gender,
+    country,
+    region,
+    status,
+    tenant_id,
+    created_at,
+    updated_at
 )
 SELECT
     gen_random_uuid(),
-    'PAT-' || upper(lpad(to_hex(g.i), 8, '0')),
-    (f.arr)[(g.i % array_length(f.arr, 1)) + 1],
-    (l.arr)[((g.i * 7) % array_length(l.arr, 1)) + 1],
-    CURRENT_DATE - ((15 + (g.i * 97) % 7300) || ' days')::interval,
+    encode(sha256(('TG-NAT-' || g.i)::bytea), 'hex'),
+    encode(sha256(((f.arr)[(g.i % array_length(f.arr, 1)) + 1] || '-' ||
+                   (l.arr)[((g.i * 7) % array_length(l.arr, 1)) + 1] || '-' || g.i)::bytea), 'hex'),
+    encode(sha256(('TG-DOB-' || g.i)::bytea), 'hex'),
+    encode(sha256(('TG-PHN-' || g.i)::bytea), 'hex'),
     CASE WHEN g.i % 2 = 0 THEN 'male' ELSE 'female' END,
-    (ARRAY['A+','A-','B+','B-','AB+','AB-','O+','O-'])[(g.i % 8) + 1],
-    '+228' || lpad(((90000000 + g.i * 12347) % 89999999 + 10000000)::text, 8, '0'),
     'TG',
+    (ARRAY['Maritime','Plateaux','Centrale','Kara','Savanes'])[(g.i % 5) + 1],
+    'active',
     'TG',
-    (SELECT id FROM clinic_ids WHERE rn = (g.i % 100) + 1),
-    true,
-    NOW() - ((g.i % 365) || ' days')::interval
+    NOW() - ((g.i % 365) || ' days')::interval,
+    NOW() - ((g.i % 30) || ' days')::interval
 FROM generate_series(1, 1000) AS g(i),
      first_names AS f,
      last_names AS l
@@ -162,6 +203,8 @@ ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
 -- SECTION 3: kinara_farmer — 500 Togolese farmers
+-- PHI columns use SHA-256 placeholder ciphertext.
+-- V018 schema: full_name_enc, phone_enc (no primary_crop or currency cols).
 -- ═══════════════════════════════════════════════════════
 \c kinara_farmer;
 
@@ -178,182 +221,186 @@ farmer_names(arr) AS (SELECT ARRAY[
   'Wola Bodjona','Xenia Chabi','Yvette Dakarai','Zerma Edjam','Akpene Fonvono',
   'Bénédic Gameli','Céleste Habia','Diabaté Ikadifo','Elom Jibril','Faustine Kazankpe'
 ]),
-regions(arr) AS (SELECT ARRAY['Maritime','Plateaux','Centrale','Kara','Savanes']),
-crops(arr) AS (SELECT ARRAY[
-  'maize','cassava','yam','cotton','coffee','cocoa','sorghum','millet',
-  'rice','beans','groundnuts','sesame','tomato','pepper','plantain'
-])
+regions(arr) AS (SELECT ARRAY['Maritime','Plateaux','Centrale','Kara','Savanes'])
 INSERT INTO farmers (
-    id, name, phone, national_id_enc, country, region,
-    primary_crop, farm_size_ha, currency, is_active, created_at, updated_at
+    id,
+    full_name_enc,
+    phone_enc,
+    national_id_enc,
+    country,
+    region,
+    farm_size_ha,
+    is_active,
+    created_at,
+    updated_at
 )
 SELECT
     gen_random_uuid(),
-    (fn.arr)[(g.i % array_length(fn.arr, 1)) + 1] || ' #' || g.i,
-    '+228' || lpad(((90000000 + g.i * 23456) % 89999999 + 10000000)::text, 8, '0'),
+    encode(sha256(((fn.arr)[(g.i % array_length(fn.arr, 1)) + 1] || '-' || g.i)::bytea), 'hex'),
+    encode(sha256(('TG-PHN-FARMER-' || g.i)::bytea), 'hex'),
     encode(sha256((g.i || 'kinara-tg-pilot')::bytea), 'hex'),
     'TG',
     (r.arr)[(g.i % array_length(r.arr, 1)) + 1],
-    (c.arr)[(g.i % array_length(c.arr, 1)) + 1],
-    round((0.5 + (g.i * 0.02 + random() * 9.5))::numeric, 2),
-    'XOF',
+    round((0.5 + (g.i * 0.02 + (g.i % 10) * 0.95))::numeric, 2),
     true,
     NOW() - ((g.i % 270) || ' days')::interval,
     NOW() - ((g.i % 30) || ' days')::interval
 FROM generate_series(1, 500) AS g(i),
      farmer_names AS fn,
-     regions AS r,
-     crops AS c
+     regions AS r
 ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
--- SECTION 4: kinara_market — Initial market prices
+-- SECTION 4: kinara_market — Initial spot price indices
+-- V019 schema has price_indices (not market_prices).
 -- ═══════════════════════════════════════════════════════
 \c kinara_market;
 
-INSERT INTO market_prices (id, commodity_name, price_per_unit, unit, market_name, country, currency, recorded_at) VALUES
-  (gen_random_uuid(), 'maize',       275, 'kg', 'Marché de Lomé',         'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'maize',       260, 'kg', 'Marché de Kara',         'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'maize',       280, 'kg', 'Marché d''Atakpamé',     'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'cassava',     120, 'kg', 'Marché de Lomé',         'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'cassava',     110, 'kg', 'Marché de Dapaong',      'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'yam',         400, 'kg', 'Marché de Sokodé',       'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'yam',         380, 'kg', 'Marché de Kpalimé',      'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'cotton',      350, 'kg', 'Marché de Kara',         'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'coffee',     1800, 'kg', 'Marché de Kpalimé',      'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'cocoa',      2100, 'kg', 'Marché de Kpalimé',      'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'sorghum',     220, 'kg', 'Marché de Dapaong',      'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'millet',      200, 'kg', 'Marché de Dapaong',      'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'rice',        550, 'kg', 'Marché de Lomé',         'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'groundnuts',  450, 'kg', 'Marché de Kara',         'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'tomato',      300, 'kg', 'Marché de Lomé',         'TG', 'XOF', NOW()),
-  (gen_random_uuid(), 'maize',      7800, 'kg', 'Marché de Accra',        'GH', 'GHS', NOW()),
-  (gen_random_uuid(), 'cassava',    3500, 'kg', 'Marché de Lagos',        'NG', 'NGN', NOW()),
-  (gen_random_uuid(), 'rice',      25000, 'kg', 'Marché de Nairobi',      'KE', 'KES', NOW()),
-  (gen_random_uuid(), 'maize',      1200, 'kg', 'Marché d''Abidjan',      'CI', 'XOF', NOW()),
-  (gen_random_uuid(), 'coffee',    95000, 'kg', 'Marché d''Addis-Abeba',  'ET', 'ETB', NOW())
+INSERT INTO price_indices (id, crop_type, market, country, price_per_kg, currency, recorded_at, source) VALUES
+  (gen_random_uuid(), 'maize',       'Marché de Lomé',         'TG',  275,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'maize',       'Marché de Kara',         'TG',  260,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'maize',       'Marché d''Atakpamé',     'TG',  280,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'cassava',     'Marché de Lomé',         'TG',  120,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'cassava',     'Marché de Dapaong',      'TG',  110,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'yam',         'Marché de Sokodé',       'TG',  400,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'yam',         'Marché de Kpalimé',      'TG',  380,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'cotton',      'Marché de Kara',         'TG',  350,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'coffee',      'Marché de Kpalimé',      'TG', 1800,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'cocoa',       'Marché de Kpalimé',      'TG', 2100,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'sorghum',     'Marché de Dapaong',      'TG',  220,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'millet',      'Marché de Dapaong',      'TG',  200,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'rice',        'Marché de Lomé',         'TG',  550,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'groundnuts',  'Marché de Kara',         'TG',  450,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'tomato',      'Marché de Lomé',         'TG',  300,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'maize',       'Marché de Accra',        'GH', 7800,    'GHS', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'cassava',     'Marché de Lagos',        'NG', 3500,    'NGN', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'rice',        'Marché de Nairobi',      'KE', 25000,   'KES', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'maize',       'Marché d''Abidjan',      'CI', 1200,    'XOF', CURRENT_DATE, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'coffee',      'Marché d''Addis-Abeba',  'ET', 95000,   'ETB', CURRENT_DATE, 'togo_pilot_seed')
 ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
--- SECTION 5: kinara_payment — FX rates (Togo pilot currencies)
+-- SECTION 5: kinara_payment — additional FX rate pairs
+-- V040 schema has currency_rates (not fx_rates).
+-- V040 already seeded USD→* pairs; this adds XOF-based and inverse pairs.
 -- ═══════════════════════════════════════════════════════
 \c kinara_payment;
 
-INSERT INTO fx_rates (id, from_currency, to_currency, rate, source, updated_at) VALUES
-  (gen_random_uuid(), 'XOF', 'USD',  0.001700, 'seed', NOW()),
-  (gen_random_uuid(), 'XOF', 'EUR',  0.001524, 'seed', NOW()),
-  (gen_random_uuid(), 'XOF', 'GHS',  0.020800, 'seed', NOW()),
-  (gen_random_uuid(), 'XOF', 'NGN',  1.318000, 'seed', NOW()),
-  (gen_random_uuid(), 'XOF', 'KES',  0.216000, 'seed', NOW()),
-  (gen_random_uuid(), 'XOF', 'ETB',  0.087000, 'seed', NOW()),
-  (gen_random_uuid(), 'XOF', 'TZS',  4.360000, 'seed', NOW()),
-  (gen_random_uuid(), 'XOF', 'RWF',  2.128000, 'seed', NOW()),
-  (gen_random_uuid(), 'GHS', 'USD',  0.081000, 'seed', NOW()),
-  (gen_random_uuid(), 'NGN', 'USD',  0.001300, 'seed', NOW()),
-  (gen_random_uuid(), 'KES', 'USD',  0.007700, 'seed', NOW()),
-  (gen_random_uuid(), 'ETB', 'USD',  0.009300, 'seed', NOW()),
-  (gen_random_uuid(), 'TZS', 'USD',  0.000390, 'seed', NOW()),
-  (gen_random_uuid(), 'RWF', 'USD',  0.000760, 'seed', NOW()),
-  (gen_random_uuid(), 'EUR', 'USD',  1.085000, 'seed', NOW()),
-  (gen_random_uuid(), 'USD', 'XOF', 588.200000,'seed', NOW()),
-  (gen_random_uuid(), 'USD', 'GHS',  12.35000, 'seed', NOW()),
-  (gen_random_uuid(), 'USD', 'NGN', 769.00000, 'seed', NOW()),
-  (gen_random_uuid(), 'USD', 'KES', 129.87000, 'seed', NOW()),
-  (gen_random_uuid(), 'USD', 'ETB', 107.53000, 'seed', NOW())
-ON CONFLICT DO NOTHING;
+INSERT INTO currency_rates (id, from_currency, to_currency, rate, source) VALUES
+  (gen_random_uuid(), 'XOF', 'USD',  0.001700, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'XOF', 'EUR',  0.001524, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'XOF', 'GHS',  0.020800, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'XOF', 'NGN',  1.318000, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'XOF', 'KES',  0.216000, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'XOF', 'ETB',  0.087000, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'XOF', 'TZS',  4.360000, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'XOF', 'RWF',  2.128000, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'GHS', 'USD',  0.081000, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'NGN', 'USD',  0.001300, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'KES', 'USD',  0.007700, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'ETB', 'USD',  0.009300, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'TZS', 'USD',  0.000390, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'RWF', 'USD',  0.000760, 'togo_pilot_seed'),
+  (gen_random_uuid(), 'EUR', 'USD',  1.085000, 'togo_pilot_seed')
+ON CONFLICT (from_currency, to_currency) DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
--- SECTION 6: kinara_port — 10 major West African ports
+-- SECTION 6: kinara_port — 10 major West African ports + 12 Lomé berths
+-- V031 schema: ports(code, total_berths, status); berths(max_length_m, max_draft_m, max_tonnage_t)
 -- ═══════════════════════════════════════════════════════
 \c kinara_port;
 
-INSERT INTO ports (id, name, port_code, country, city, latitude, longitude, berths_total, berths_available, max_vessel_dwt, timezone, is_active, created_at) VALUES
-  (gen_random_uuid(), 'Port Autonome de Lomé',         'TGLFW', 'TG', 'Lomé',          6.1319, 1.2730,   12, 8,  80000, 'Africa/Abidjan', true, NOW()),
-  (gen_random_uuid(), 'Port of Tema',                  'GHTEM', 'GH', 'Tema',           5.6391, -0.0064,  20,14, 100000, 'Africa/Accra',   true, NOW()),
-  (gen_random_uuid(), 'Lagos Port Complex',            'NGLOS', 'NG', 'Lagos',          6.4541, 3.3947,   35,20, 150000, 'Africa/Lagos',   true, NOW()),
-  (gen_random_uuid(), 'Port d''Abidjan',               'CIABJ', 'CI', 'Abidjan',        5.2892, -4.0035,  25,18, 120000, 'Africa/Abidjan', true, NOW()),
-  (gen_random_uuid(), 'Port de Cotonou',               'BJCOO', 'BJ', 'Cotonou',        6.3654, 2.4166,   10, 7,  60000, 'Africa/Porto-Novo',true,NOW()),
-  (gen_random_uuid(), 'Port de Dakar',                 'SNDKR', 'SN', 'Dakar',          14.6928,-17.4467, 22,15, 110000, 'Africa/Dakar',   true, NOW()),
-  (gen_random_uuid(), 'Douala Port Authority',         'CMDLA', 'CM', 'Douala',          4.0511, 9.7679,   18,12,  90000, 'Africa/Douala',  true, NOW()),
-  (gen_random_uuid(), 'Port of Mombasa',               'KEMBA', 'KE', 'Mombasa',       -4.0435,39.6682,   30,20, 130000, 'Africa/Nairobi', true, NOW()),
-  (gen_random_uuid(), 'Port of Dar es Salaam',         'TZDAR', 'TZ', 'Dar es Salaam', -6.8199,39.2924,   16,11,  85000, 'Africa/Dar_es_Salaam',true,NOW()),
-  (gen_random_uuid(), 'Port de San-Pédro',             'CISPY', 'CI', 'San-Pédro',      4.7483,-6.6306,    8, 6,  60000, 'Africa/Abidjan', true, NOW())
+INSERT INTO ports (id, name, code, country, city, latitude, longitude, total_berths, status, created_at) VALUES
+  (gen_random_uuid(), 'Port Autonome de Lomé',         'TGLFW', 'TG', 'Lomé',          6.1319,   1.2730,  12, 'operational', NOW()),
+  (gen_random_uuid(), 'Port of Tema',                  'GHTEM', 'GH', 'Tema',           5.6391,  -0.0064, 20, 'operational', NOW()),
+  (gen_random_uuid(), 'Lagos Port Complex',            'NGLOS', 'NG', 'Lagos',          6.4541,   3.3947,  35, 'operational', NOW()),
+  (gen_random_uuid(), 'Port d''Abidjan',               'CIABJ', 'CI', 'Abidjan',        5.2892,  -4.0035, 25, 'operational', NOW()),
+  (gen_random_uuid(), 'Port de Cotonou',               'BJCOO', 'BJ', 'Cotonou',        6.3654,   2.4166,  10, 'operational', NOW()),
+  (gen_random_uuid(), 'Port de Dakar',                 'SNDKR', 'SN', 'Dakar',         14.6928, -17.4467, 22, 'operational', NOW()),
+  (gen_random_uuid(), 'Douala Port Authority',         'CMDLA', 'CM', 'Douala',          4.0511,   9.7679, 18, 'operational', NOW()),
+  (gen_random_uuid(), 'Port of Mombasa',               'KEMBA', 'KE', 'Mombasa',       -4.0435,  39.6682, 30, 'operational', NOW()),
+  (gen_random_uuid(), 'Port of Dar es Salaam',         'TZDAR', 'TZ', 'Dar es Salaam', -6.8199,  39.2924, 16, 'operational', NOW()),
+  (gen_random_uuid(), 'Port de San-Pédro',             'CISPY', 'CI', 'San-Pédro',      4.7483,  -6.6306,  8, 'operational', NOW())
 ON CONFLICT DO NOTHING;
 
--- Seed berths for Lomé port
-INSERT INTO berths (id, port_id, berth_number, berth_type, max_dwt_tonnes, length_m, depth_m, status, created_at)
+INSERT INTO berths (id, port_id, berth_number, status, max_length_m, max_draft_m, max_tonnage_t, created_at)
 SELECT
     gen_random_uuid(),
-    (SELECT id FROM ports WHERE port_code = 'TGLFW'),
+    (SELECT id FROM ports WHERE code = 'TGLFW'),
     'B' || b.n,
-    (ARRAY['general_cargo','container','bulk','tanker','roro'])[(b.n % 5) + 1],
-    (ARRAY[40000,60000,80000,50000,70000])[(b.n % 5) + 1],
-    (ARRAY[150,200,180,160,190])[(b.n % 5) + 1],
-    (ARRAY[10.5,12.0,11.0,9.5,13.0])[(b.n % 5) + 1],
     CASE WHEN b.n <= 8 THEN 'available' ELSE 'occupied' END,
+    (ARRAY[150,200,180,160,190,150,200,180,160,190,150,200])[b.n],
+    (ARRAY[10.5,12.0,11.0,9.5,13.0,10.5,12.0,11.0,9.5,13.0,10.5,12.0])[b.n],
+    (ARRAY[40000,60000,80000,50000,70000,40000,60000,80000,50000,70000,40000,60000])[b.n],
     NOW()
 FROM generate_series(1, 12) AS b(n)
 ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
 -- SECTION 7: kinara_cooperative — 10 pilot cooperatives
+-- V020 schema: registration_no (not registration_number), total_members (not member_count).
 -- ═══════════════════════════════════════════════════════
 \c kinara_cooperative;
 
-INSERT INTO cooperatives (id, name, region, country, crop_focus, member_count, registration_number, contact_phone, is_active, created_at) VALUES
-  (gen_random_uuid(), 'Coopérative Maïs du Maritime',        'Maritime', 'TG', 'maize',      120, 'COOP-TG-001', '+22890010001', true, NOW()),
-  (gen_random_uuid(), 'Union des Caféiculteurs de Kpalimé',  'Plateaux', 'TG', 'coffee',      85, 'COOP-TG-002', '+22890010002', true, NOW()),
-  (gen_random_uuid(), 'Coopérative Coton du Nord',           'Kara',     'TG', 'cotton',     200, 'COOP-TG-003', '+22890010003', true, NOW()),
-  (gen_random_uuid(), 'Association Cacaoyère de Badou',      'Plateaux', 'TG', 'cocoa',       65, 'COOP-TG-004', '+22890010004', true, NOW()),
-  (gen_random_uuid(), 'Groupement Vivrier de la Centrale',   'Centrale', 'TG', 'yam',        150, 'COOP-TG-005', '+22890010005', true, NOW()),
-  (gen_random_uuid(), 'Coopérative Sorgho des Savanes',      'Savanes',  'TG', 'sorghum',    175, 'COOP-TG-006', '+22890010006', true, NOW()),
-  (gen_random_uuid(), 'Union Maraîchère de Lomé',            'Maritime', 'TG', 'tomato',      90, 'COOP-TG-007', '+22890010007', true, NOW()),
-  (gen_random_uuid(), 'Coopérative Riz du Lac Togo',         'Maritime', 'TG', 'rice',        60, 'COOP-TG-008', '+22890010008', true, NOW()),
-  (gen_random_uuid(), 'Association Femmes Agricultrices',    'Maritime', 'TG', 'groundnuts', 250, 'COOP-TG-009', '+22890010009', true, NOW()),
-  (gen_random_uuid(), 'Coopérative Mil et Sorgho Nord-Togo', 'Savanes',  'TG', 'millet',     130, 'COOP-TG-010', '+22890010010', true, NOW())
-ON CONFLICT DO NOTHING;
+INSERT INTO cooperatives (id, name, registration_no, country, region, total_members, contact_phone, description, status, created_at) VALUES
+  (gen_random_uuid(), 'Coopérative Maïs du Maritime',        'COOP-TG-001', 'TG', 'Maritime', 120, '+22890010001', 'maize production cooperative',   'active', NOW()),
+  (gen_random_uuid(), 'Union des Caféiculteurs de Kpalimé',  'COOP-TG-002', 'TG', 'Plateaux',  85, '+22890010002', 'coffee growers union',           'active', NOW()),
+  (gen_random_uuid(), 'Coopérative Coton du Nord',           'COOP-TG-003', 'TG', 'Kara',     200, '+22890010003', 'cotton production cooperative',   'active', NOW()),
+  (gen_random_uuid(), 'Association Cacaoyère de Badou',      'COOP-TG-004', 'TG', 'Plateaux',  65, '+22890010004', 'cocoa growers association',       'active', NOW()),
+  (gen_random_uuid(), 'Groupement Vivrier de la Centrale',   'COOP-TG-005', 'TG', 'Centrale', 150, '+22890010005', 'yam and food crop collective',    'active', NOW()),
+  (gen_random_uuid(), 'Coopérative Sorgho des Savanes',      'COOP-TG-006', 'TG', 'Savanes',  175, '+22890010006', 'sorghum production cooperative',  'active', NOW()),
+  (gen_random_uuid(), 'Union Maraîchère de Lomé',            'COOP-TG-007', 'TG', 'Maritime',  90, '+22890010007', 'vegetable and tomato growers',    'active', NOW()),
+  (gen_random_uuid(), 'Coopérative Riz du Lac Togo',         'COOP-TG-008', 'TG', 'Maritime',  60, '+22890010008', 'rice production cooperative',     'active', NOW()),
+  (gen_random_uuid(), 'Association Femmes Agricultrices',    'COOP-TG-009', 'TG', 'Maritime', 250, '+22890010009', 'groundnut and women''s farming',  'active', NOW()),
+  (gen_random_uuid(), 'Coopérative Mil et Sorgho Nord-Togo', 'COOP-TG-010', 'TG', 'Savanes',  130, '+22890010010', 'millet and sorghum collective',   'active', NOW())
+ON CONFLICT (registration_no) DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
 -- SECTION 8: kinara_notification — notification templates
+-- V044 schema: template_key (UNIQUE), body_template (not body).
+-- Keys include language suffix to satisfy UNIQUE constraint.
 -- ═══════════════════════════════════════════════════════
 \c kinara_notification;
 
-INSERT INTO notification_templates (id, name, channel, language, subject, body, is_active, created_at) VALUES
-  (gen_random_uuid(), 'appointment_reminder',    'sms', 'fr', NULL,
+INSERT INTO notification_templates (id, template_key, channel, language, subject, body_template, is_active, created_at) VALUES
+  (gen_random_uuid(), 'appointment_reminder_fr',  'sms', 'fr', NULL,
    'KINARA RDV: Rappel - Votre consultation est demain à {{time}} à {{clinic}}. Ref: {{ref}}',
    true, NOW()),
-  (gen_random_uuid(), 'appointment_reminder',    'sms', 'en', NULL,
+  (gen_random_uuid(), 'appointment_reminder_en',  'sms', 'en', NULL,
    'KINARA APPT: Reminder - Your appointment is tomorrow at {{time}} at {{clinic}}. Ref: {{ref}}',
    true, NOW()),
-  (gen_random_uuid(), 'lab_result_ready',        'sms', 'fr', NULL,
+  (gen_random_uuid(), 'lab_result_ready_fr',      'sms', 'fr', NULL,
    'KINARA LABO: Vos résultats pour {{test}} sont prêts. Ordre: {{ref}}. Collectez au labo.',
    true, NOW()),
-  (gen_random_uuid(), 'outbreak_alert',          'sms', 'fr', NULL,
+  (gen_random_uuid(), 'outbreak_alert_fr',        'sms', 'fr', NULL,
    'ALERTE SANTE KINARA: {{disease}} signalée dans votre région ({{region}}). Cas: {{count}}. Consultez le CS local.',
    true, NOW()),
-  (gen_random_uuid(), 'payment_received',        'sms', 'fr', NULL,
+  (gen_random_uuid(), 'payment_received_fr',      'sms', 'fr', NULL,
    'KINARA PAY: {{amount}} {{currency}} reçu de {{sender}}. Solde: {{balance}} {{currency}}.',
    true, NOW()),
-  (gen_random_uuid(), 'market_price_alert',      'sms', 'fr', NULL,
+  (gen_random_uuid(), 'market_price_alert_fr',    'sms', 'fr', NULL,
    'KINARA PRIX: {{commodity}} à {{price}} {{currency}}/kg au marché de {{market}}.',
    true, NOW())
-ON CONFLICT DO NOTHING;
+ON CONFLICT (template_key) DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════
 -- Verification queries (run manually after migration)
 -- ═══════════════════════════════════════════════════════
--- \c kinara_patient;  SELECT 'clinics'  , COUNT(*) FROM clinics;
--- \c kinara_patient;  SELECT 'patients' , COUNT(*) FROM patients;
--- \c kinara_farmer;   SELECT 'farmers'  , COUNT(*) FROM farmers;
--- \c kinara_market;   SELECT 'prices'   , COUNT(*) FROM market_prices;
--- \c kinara_payment;  SELECT 'fx_rates' , COUNT(*) FROM fx_rates;
--- \c kinara_port;     SELECT 'ports'    , COUNT(*) FROM ports;
--- \c kinara_cooperative; SELECT 'coops' , COUNT(*) FROM cooperatives;
+-- \c kinara_patient;      SELECT 'clinics'  , COUNT(*) FROM clinics;
+-- \c kinara_patient;      SELECT 'patients' , COUNT(*) FROM patients;
+-- \c kinara_farmer;       SELECT 'farmers'  , COUNT(*) FROM farmers;
+-- \c kinara_market;       SELECT 'prices'   , COUNT(*) FROM price_indices WHERE source = 'togo_pilot_seed';
+-- \c kinara_payment;      SELECT 'fx_rates' , COUNT(*) FROM currency_rates;
+-- \c kinara_port;         SELECT 'ports'    , COUNT(*) FROM ports;
+-- \c kinara_port;         SELECT 'berths'   , COUNT(*) FROM berths;
+-- \c kinara_cooperative;  SELECT 'coops'    , COUNT(*) FROM cooperatives;
+-- \c kinara_notification; SELECT 'templates', COUNT(*) FROM notification_templates;
 
--- DOWN: truncate all seeded tables (dangerous — only for dev reset)
--- \c kinara_patient;   TRUNCATE clinics, patients CASCADE;
--- \c kinara_farmer;    TRUNCATE farmers CASCADE;
--- \c kinara_market;    TRUNCATE market_prices CASCADE;
--- \c kinara_payment;   DELETE FROM fx_rates WHERE source = 'seed';
--- \c kinara_port;      TRUNCATE ports, berths CASCADE;
--- \c kinara_cooperative; TRUNCATE cooperatives CASCADE;
+-- DOWN: undo seed (dev reset only — never run in production without sign-off)
+-- \c kinara_patient;      TRUNCATE clinics, patients CASCADE;
+-- \c kinara_farmer;       TRUNCATE farmers CASCADE;
+-- \c kinara_market;       DELETE FROM price_indices WHERE source = 'togo_pilot_seed';
+-- \c kinara_payment;      DELETE FROM currency_rates WHERE source = 'togo_pilot_seed';
+-- \c kinara_port;         TRUNCATE ports, berths CASCADE;
+-- \c kinara_cooperative;  DELETE FROM cooperatives WHERE registration_no LIKE 'COOP-TG-%';
+-- \c kinara_notification; DELETE FROM notification_templates WHERE template_key LIKE 'appointment_%' OR template_key LIKE 'lab_%' OR template_key LIKE 'outbreak_%' OR template_key LIKE 'payment_%' OR template_key LIKE 'market_%';
