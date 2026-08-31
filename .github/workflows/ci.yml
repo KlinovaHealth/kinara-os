@@ -166,6 +166,11 @@ jobs:
               push_with_retry $REGISTRY/$name:latest
             fi
           done
+          echo "Building kinara-pgbouncer..."
+          docker build -t $REGISTRY/kinara-pgbouncer:${{ github.sha }} -t $REGISTRY/kinara-pgbouncer:latest \
+            infrastructure/pgbouncer
+          push_with_retry $REGISTRY/kinara-pgbouncer:${{ github.sha }}
+          push_with_retry $REGISTRY/kinara-pgbouncer:latest
 
   deploy-togo:
     name: Deploy to Togo Production

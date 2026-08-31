@@ -1,0 +1,30 @@
+name: Build PgBouncer Image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'infrastructure/pgbouncer/Dockerfile'
+
+env:
+  REGISTRY: ghcr.io/klinovahealth
+
+jobs:
+  build-pgbouncer:
+    name: Build & Push PgBouncer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GH_PACKAGES_PAT }}" | docker login ghcr.io -u KlinovaHealth --password-stdin
+      - name: Build and push
+        run: |
+          docker build \
+            -t $REGISTRY/kinara-pgbouncer:${{ github.sha }} \
+            -t $REGISTRY/kinara-pgbouncer:latest \
+            infrastructure/pgbouncer
+          docker push $REGISTRY/kinara-pgbouncer:${{ github.sha }}
+          docker push $REGISTRY/kinara-pgbouncer:latest

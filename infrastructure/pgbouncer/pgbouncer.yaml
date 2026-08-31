@@ -95,7 +95,7 @@ spec:
               mountPath: /pgbouncer-conf
       containers:
         - name: pgbouncer
-          image: pgbouncer/pgbouncer:1.23.1
+          image: ghcr.io/klinovahealth/kinara-pgbouncer:latest
           ports:
             - containerPort: 5432
               name: pgbouncer
