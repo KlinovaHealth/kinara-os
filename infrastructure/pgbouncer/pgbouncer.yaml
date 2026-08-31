@@ -24,6 +24,8 @@ spec:
     spec:
       securityContext:
         fsGroup: 70
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       initContainers:
         - name: config-init
           image: alpine:3.19
