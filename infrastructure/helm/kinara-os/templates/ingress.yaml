@@ -11,8 +11,23 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
+    nginx.ingress.kubernetes.io/proxy-ssl-secret: "{{ .Values.global.namespace }}/kinara-nginx-client-cert"
+    {{- if .Values.ingress.tlsEnabled }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer | quote }}
+    {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className | default "nginx" }}
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+        {{- if .Values.ingress.adminHost }}
+        - {{ .Values.ingress.adminHost | quote }}
+        {{- end }}
+      secretName: {{ .Values.ingress.tlsSecret | quote }}
+  {{- end }}
   rules:
     - host: {{ .Values.ingress.host | quote }}
       http:

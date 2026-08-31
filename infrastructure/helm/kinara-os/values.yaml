@@ -183,6 +183,15 @@ services:
   feedback:              { port: 8719, replicas: 1, maxReplicas: 10, db: kinara_feedback }
   integration:           { port: 8720, replicas: 1, maxReplicas: 10, db: kinara_integration }
 
+ingress:
+  enabled: true
+  className: nginx
+  host: api.kinaraos.com
+  adminHost: admin.kinaraos.com
+  tlsEnabled: true
+  tlsSecret: kinara-tls-production
+  clusterIssuer: letsencrypt-production
+
 monitoring:
   prometheus:
     enabled: true

@@ -1,0 +1,49 @@
+# Alertmanager email configuration — Phase 4
+# Apply AFTER you have SMTP credentials:
+#
+#   kubectl create secret generic alertmanager-smtp \
+#     -n monitoring \
+#     --from-literal=smtp_password='<YOUR_APP_PASSWORD>' \
+#     --context do-fra1-production-kinara
+#
+# Then update kube-prometheus-stack-values.yaml alertmanager.config block:
+#
+#   global:
+#     smtp_smarthost: '<SMTP_HOST>:<SMTP_PORT>'   # e.g. smtp.gmail.com:587
+#     smtp_from: '<FROM_ADDRESS>'                  # e.g. alerts@kinaraos.com
+#     smtp_auth_username: '<SMTP_USER>'
+#     smtp_auth_password: '<SMTP_APP_PASSWORD>'
+#     smtp_require_tls: true
+#
+#   receivers:
+#     - name: email-critical
+#       email_configs:
+#         - to: 'oncall@kinaraos.com'             # <-- replace
+#           send_resolved: true
+#           headers:
+#             subject: '[CRITICAL] Kinara OS {{ .GroupLabels.alertname }}'
+#           html: |
+#             <b>Alert:</b> {{ .GroupLabels.alertname }}<br>
+#             <b>Severity:</b> {{ .GroupLabels.severity }}<br>
+#             {{ range .Alerts }}
+#             <p>{{ .Annotations.description }}</p>
+#             {{ end }}
+#
+#     - name: email-warning
+#       email_configs:
+#         - to: 'team@kinaraos.com'               # <-- replace
+#           send_resolved: true
+#
+# Then apply:
+#   helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     -n monitoring \
+#     -f infrastructure/monitoring/kube-prometheus-stack-values.yaml \
+#     --kube-context do-fra1-production-kinara
+#
+# Verify email by deleting a pod — the alert fires within ~5 min and email arrives.
+
+# SMTP providers commonly used for alerts:
+#   Gmail:      smtp.gmail.com:587    (use App Password, not account password)
+#   SendGrid:   smtp.sendgrid.net:587
+#   AWS SES:    email-smtp.<region>.amazonaws.com:587
+#   Mailgun:    smtp.mailgun.org:587

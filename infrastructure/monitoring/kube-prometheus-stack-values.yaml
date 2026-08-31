@@ -1,0 +1,269 @@
+# kube-prometheus-stack Helm values — kinara-production cluster
+# Namespace: monitoring
+#
+# Deploy:
+#   helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     -n monitoring \
+#     -f infrastructure/monitoring/kube-prometheus-stack-values.yaml \
+#     --kube-context do-fra1-production-kinara
+
+# ── Global ────────────────────────────────────────────────────────────────────
+nameOverride: ""
+fullnameOverride: ""
+
+# ── Prometheus ────────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    # Scrape interval
+    scrapeInterval: "30s"
+    evaluationInterval: "30s"
+
+    # Retain 15 days of metrics
+    retention: 15d
+    retentionSize: "10GiB"
+
+    # Modest resource requests for a 3-node cluster
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+    # Mount the mTLS client cert so Prometheus can scrape services that require it
+    secrets:
+      - kinara-nginx-client-cert
+
+    # Scrape kinara-production services via pod annotations
+    additionalScrapeConfigs:
+      - job_name: kinara-services
+        scheme: https
+        tls_config:
+          insecure_skip_verify: true
+          cert_file: /etc/prometheus/secrets/kinara-nginx-client-cert/tls.crt
+          key_file: /etc/prometheus/secrets/kinara-nginx-client-cert/tls.key
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [kinara-production]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: service
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+
+      # Plain-HTTP metrics (services annotated with prometheus.io/scheme: http)
+      - job_name: kinara-services-http
+        scheme: http
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [kinara-production]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+            action: keep
+            regex: "http"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: service
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+
+      - job_name: pgbouncer
+        scheme: https
+        tls_config:
+          insecure_skip_verify: true
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [kinara-production]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: pgbouncer
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+):.*
+            replacement: $1:9127
+            target_label: __address__
+
+    # Include kinara alerting rules
+    ruleSelector:
+      matchLabels:
+        app: kinara-monitoring
+
+    ruleNamespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: [monitoring]
+
+# ── Alertmanager ──────────────────────────────────────────────────────────────
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  config:
+    global:
+      resolve_timeout: 5m
+      # SMTP — fill in real credentials before enabling email receiver (Phase 4)
+      # smtp_smarthost: 'smtp.example.com:587'
+      # smtp_from: 'alerts@kinaraos.com'
+      # smtp_auth_username: 'alerts@kinaraos.com'
+      # smtp_auth_password: '<REPLACE_WITH_APP_PASSWORD>'
+
+    route:
+      group_by: [alertname, namespace, service]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: "null"
+      routes:
+        - matchers:
+            - alertname =~ "Watchdog|InfoInhibitor"
+          receiver: "null"
+        - matchers:
+            - severity = critical
+          receiver: email-critical
+          continue: true
+        - matchers:
+            - severity = warning
+          receiver: email-warning
+
+    receivers:
+      - name: "null"
+
+      - name: email-critical
+        email_configs: []
+        # email_configs:
+        #   - to: 'oncall@kinaraos.com'
+        #     send_resolved: true
+        #     headers:
+        #       subject: '[CRITICAL] Kinara OS {{ .GroupLabels.alertname }}'
+
+      - name: email-warning
+        email_configs: []
+        # email_configs:
+        #   - to: 'team@kinaraos.com'
+        #     send_resolved: true
+        #     headers:
+        #       subject: '[WARNING] Kinara OS {{ .GroupLabels.alertname }}'
+
+    inhibit_rules:
+      - source_matchers: [severity = critical]
+        target_matchers: [severity = warning]
+        equal: [alertname, namespace]
+
+# ── Grafana ────────────────────────────────────────────────────────────────────
+grafana:
+  enabled: true
+  adminPassword: "KinaraGrafana2026!"   # Change after first login
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  persistence:
+    enabled: true
+    size: 5Gi
+
+  grafana.ini:
+    server:
+      root_url: "https://grafana.kinaraos.internal"
+    auth.anonymous:
+      enabled: false
+    security:
+      admin_user: admin
+
+  # Pre-install useful dashboards
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: Kinara
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+  dashboards:
+    default:
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+      kubernetes-pods:
+        gnetId: 6417
+        revision: 1
+        datasource: Prometheus
+      node-exporter:
+        gnetId: 1860
+        revision: 37
+        datasource: Prometheus
+      pgbouncer:
+        gnetId: 9127
+        revision: 1
+        datasource: Prometheus
+
+# ── Node Exporter ─────────────────────────────────────────────────────────────
+nodeExporter:
+  enabled: true
+
+# ── kube-state-metrics ────────────────────────────────────────────────────────
+kubeStateMetrics:
+  enabled: true
+
+# ── Prometheus Operator ───────────────────────────────────────────────────────
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

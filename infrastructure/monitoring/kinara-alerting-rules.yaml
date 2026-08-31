@@ -1,0 +1,229 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kinara-alerts
+  namespace: monitoring
+  labels:
+    app: kinara-monitoring
+spec:
+  groups:
+    # ── Kubernetes Pod Health ─────────────────────────────────────────────────
+    - name: kinara.pod.health
+      interval: 30s
+      rules:
+        - alert: KinaraPodCrashLoopBackOff
+          expr: |
+            kube_pod_container_status_waiting_reason{
+              namespace="kinara-production",
+              reason="CrashLoopBackOff"
+            } == 1
+          for: 2m
+          labels:
+            severity: critical
+            pillar: platform
+          annotations:
+            summary: "Pod {{ $labels.pod }} is in CrashLoopBackOff"
+            description: |
+              Container {{ $labels.container }} in pod {{ $labels.pod }}
+              (namespace {{ $labels.namespace }}) has been in CrashLoopBackOff
+              for more than 2 minutes. Check logs: kubectl logs {{ $labels.pod }}
+              -n kinara-production -c {{ $labels.container }}
+
+        - alert: KinaraPodNotReady
+          expr: |
+            kube_pod_status_ready{
+              namespace="kinara-production",
+              condition="true"
+            } == 0
+            unless on(pod, namespace)
+            kube_pod_status_phase{
+              namespace="kinara-production",
+              phase=~"Succeeded|Failed"
+            } == 1
+          for: 5m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "Pod {{ $labels.pod }} not Ready for >5 min"
+            description: |
+              Pod {{ $labels.pod }} in namespace {{ $labels.namespace }}
+              has been in a not-Ready state for more than 5 minutes.
+
+        - alert: KinaraPodOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{
+              namespace="kinara-production",
+              reason="OOMKilled"
+            } == 1
+          for: 0m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "Pod {{ $labels.pod }} OOM-killed"
+            description: |
+              Container {{ $labels.container }} in pod {{ $labels.pod }} was
+              killed due to out-of-memory. Consider increasing memory limits.
+
+    # ── Node Health ───────────────────────────────────────────────────────────
+    - name: kinara.node.health
+      interval: 60s
+      rules:
+        - alert: KinaraNodeDown
+          expr: up{job="node-exporter"} == 0
+          for: 3m
+          labels:
+            severity: critical
+            pillar: platform
+          annotations:
+            summary: "Node exporter down on {{ $labels.instance }}"
+            description: |
+              node_exporter on {{ $labels.instance }} has been unreachable
+              for 3+ minutes. The node may be down or unreachable.
+
+        - alert: KinaraNodeHighMemory
+          expr: |
+            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "Node {{ $labels.instance }} memory >85%"
+            description: |
+              Node {{ $labels.instance }} memory usage is
+              {{ $value | printf "%.1f" }}% (threshold: 85%).
+
+        - alert: KinaraNodeHighCPU
+          expr: |
+            100 - (avg by(instance)
+              (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+          for: 10m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "Node {{ $labels.instance }} CPU >85%"
+            description: |
+              Node {{ $labels.instance }} CPU usage is
+              {{ $value | printf "%.1f" }}% for the last 10 minutes.
+
+        - alert: KinaraNodeDiskSpaceLow
+          expr: |
+            (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} /
+                  node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 80
+          for: 5m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "Node {{ $labels.instance }} disk >80% on {{ $labels.mountpoint }}"
+            description: |
+              Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }}
+              is {{ $value | printf "%.1f" }}% full.
+
+    # ── PgBouncer ─────────────────────────────────────────────────────────────
+    - name: kinara.pgbouncer
+      interval: 30s
+      rules:
+        - alert: KinaraPgBouncerDown
+          expr: up{job="pgbouncer"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            pillar: platform
+          annotations:
+            summary: "PgBouncer is down"
+            description: |
+              PgBouncer ({{ $labels.instance }}) has not been scrapeable
+              for 2+ minutes. All 152 services are unable to reach Postgres.
+
+        - alert: KinaraPgBouncerNearMaxConnections
+          expr: |
+            pgbouncer_databases_current_connections /
+            pgbouncer_databases_max_connections > 0.80
+          for: 5m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "PgBouncer pool >80% full on {{ $labels.database }}"
+            description: |
+              PgBouncer pool for database {{ $labels.database }} is
+              {{ $value | printf "%.0f%%" }} full. max_db_connections=90.
+
+        - alert: KinaraPgBouncerPoolExhausted
+          expr: |
+            pgbouncer_databases_current_connections >=
+            pgbouncer_databases_max_connections
+          for: 1m
+          labels:
+            severity: critical
+            pillar: platform
+          annotations:
+            summary: "PgBouncer pool exhausted on {{ $labels.database }}"
+            description: |
+              PgBouncer has reached max_db_connections for database
+              {{ $labels.database }}. New queries are being queued or rejected.
+
+    # ── Postgres Connections ──────────────────────────────────────────────────
+    - name: kinara.postgres
+      interval: 60s
+      rules:
+        - alert: KinaraPostgresConnectionsClimbing
+          expr: |
+            pg_stat_database_numbackends{datname!~"template.*|postgres"}
+            > 50
+          for: 5m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "Postgres connections rising: {{ $value }} on {{ $labels.datname }}"
+            description: |
+              Database {{ $labels.datname }} has {{ $value }} active connections.
+              Expected ≤ 90 via PgBouncer. Check if PgBouncer pooling has
+              degraded or a new direct-connect client is bypassing the pool.
+
+    # ── Service-level Availability ────────────────────────────────────────────
+    - name: kinara.service.availability
+      interval: 60s
+      rules:
+        - alert: KinaraServiceHighErrorRate
+          expr: |
+            sum by(service, namespace) (
+              rate(http_requests_total{
+                namespace="kinara-production",
+                status=~"5.."
+              }[5m])
+            )
+            /
+            sum by(service, namespace) (
+              rate(http_requests_total{namespace="kinara-production"}[5m])
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            pillar: platform
+          annotations:
+            summary: "Service {{ $labels.service }} error rate >5%"
+            description: |
+              Service {{ $labels.service }} in {{ $labels.namespace }}
+              is returning 5xx errors at {{ $value | printf "%.1f%%" }} rate
+              over the past 5 minutes.
+
+        - alert: KinaraServiceDown
+          expr: |
+            kube_deployment_status_replicas_available{
+              namespace="kinara-production"
+            } == 0
+          for: 3m
+          labels:
+            severity: critical
+            pillar: platform
+          annotations:
+            summary: "Service {{ $labels.deployment }} has 0 replicas"
+            description: |
+              Deployment {{ $labels.deployment }} in {{ $labels.namespace }}
+              has had 0 available replicas for 3+ minutes.

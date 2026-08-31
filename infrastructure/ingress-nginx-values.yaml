@@ -1,0 +1,49 @@
+# ingress-nginx Helm values for kinara-production cluster
+# Chart: ingress-nginx 4.15.1 (controller v1.15.1)
+# Namespace: ingress-nginx
+#
+# Apply with:
+#   helm upgrade ingress-nginx ingress-nginx \
+#     --repo https://kubernetes.github.io/ingress-nginx \
+#     -n ingress-nginx \
+#     -f infrastructure/ingress-nginx-values.yaml \
+#     --kube-context do-fra1-production-kinara
+#
+# Prerequisites:
+#   kinara-nginx-client-cert secret must exist in both ingress-nginx and kinara-production namespaces.
+#   Secret contains the nginx client certificate (tls.crt, tls.key) used for mTLS to backend services.
+#   Copy from kinara-production if needed:
+#     kubectl get secret kinara-nginx-client-cert -n kinara-production -o json \
+#       | python3 -c "import sys,json; s=json.load(sys.stdin); s['metadata']={'name':s['metadata']['name'],'namespace':'ingress-nginx'}; print(json.dumps(s))" \
+#       | kubectl apply -f -
+
+controller:
+  replicaCount: 2
+
+  # Required for mTLS: mounts kinara-nginx-client-cert into the nginx process
+  # so proxy_ssl_certificate can reference files on disk.
+  extraVolumes:
+    - name: nginx-client-cert
+      secret:
+        secretName: kinara-nginx-client-cert
+
+  extraVolumeMounts:
+    - name: nginx-client-cert
+      mountPath: /etc/nginx/client-cert
+      readOnly: true
+
+  # allowSnippetAnnotations: kept true for audit purposes; actual mTLS injection
+  # is done via server-snippet in the ConfigMap (per-ingress snippets have a v1.15.x
+  # bug where AllowSnippetAnnotations is not propagated to the webhook validator).
+  allowSnippetAnnotations: true
+
+  config:
+    use-forwarded-headers: "true"
+    allow-snippet-annotations: "true"
+
+    # Injects proxy_ssl_certificate into every server block so that nginx
+    # presents the client certificate when connecting to mTLS backend services.
+    # Backends use CN=staging.kinara.local self-signed certs with RequireAndVerifyClientCert.
+    server-snippet: |
+      proxy_ssl_certificate /etc/nginx/client-cert/tls.crt;
+      proxy_ssl_certificate_key /etc/nginx/client-cert/tls.key;

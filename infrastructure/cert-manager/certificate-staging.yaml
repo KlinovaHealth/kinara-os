@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kinara-tls-staging
+  namespace: kinara-production
+spec:
+  secretName: kinara-tls-staging
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+  commonName: api.kinaraos.com
+  dnsNames:
+    - api.kinaraos.com
+    - admin.kinaraos.com
