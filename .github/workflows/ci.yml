@@ -147,7 +147,7 @@ jobs:
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Log in to DigitalOcean Container Registry
-        run: doctl registry login --expiry-seconds 3600
+        run: doctl registry login --expiry-seconds 21600
       - name: Build and push all service images
         run: |
           push_with_retry() {
