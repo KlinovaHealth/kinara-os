@@ -1,0 +1,170 @@
+# Kinara OS — NetworkPolicies for kinara-production namespace
+#
+# Apply:
+#   kubectl apply -f infrastructure/k8s/network-policies.yaml \
+#     --context do-fra1-production-kinara
+#
+# Security model:
+#   Ingress: default-deny-all, then explicit allow per source.
+#   Egress:  one comprehensive allow policy covers all required paths
+#            (intra-namespace, pgbouncer, Redis, DNS, external HTTPS).
+#            No blanket egress deny — additional egress rules can be added
+#            per-service in future hardening iterations.
+
+# ── 1. Default deny-all ingress ───────────────────────────────────────────────
+# Empty podSelector = selects all pods. Presence of this policy causes
+# Kubernetes to deny ALL ingress to every pod unless another policy permits it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all-ingress
+  namespace: kinara-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress: []
+
+---
+# ── 2. Allow ingress from ingress-nginx controller ────────────────────────────
+# The NGINX controller sends traffic to backend pods on their service port.
+# Selector matches the ingress-nginx-controller pods specifically.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-from-nginx
+  namespace: kinara-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+              app.kubernetes.io/component: controller
+
+---
+# ── 3. Allow Prometheus scraping ──────────────────────────────────────────────
+# Prometheus (in monitoring namespace) scrapes /metrics on each pod's
+# declared port (prometheus.io/port pod annotation).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-from-prometheus
+  namespace: kinara-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+
+---
+# ── 4. Allow intra-namespace ingress ─────────────────────────────────────────
+# Service-to-service calls (patient-service → notification-service etc.)
+# travel directly via cluster DNS within kinara-production.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-intra-namespace-ingress
+  namespace: kinara-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+
+---
+# ── 5. Comprehensive egress rules ────────────────────────────────────────────
+# One policy covering all permitted egress paths for service pods:
+#   a) Intra-namespace pod-to-pod (service calls, health checks)
+#   b) PgBouncer connection pooler (port 5432)
+#   c) Redis cache (port 6379)
+#   d) DNS resolution (port 53 UDP+TCP)
+#   e) External HTTPS (port 443) for SMS gateway and other outbound APIs
+#
+# NOTE: This does NOT restrict which pods within the namespace can be reached;
+# the ingress policies above control the receiving side.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-service-pods
+  namespace: kinara-production
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: NotIn
+        values: [kinara-pgbouncer]
+  policyTypes:
+    - Egress
+  egress:
+    # a) Any pod in the same namespace (intra-service calls on any port)
+    - to:
+        - podSelector: {}
+    # b) PgBouncer on 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kinara-pgbouncer
+      ports:
+        - protocol: TCP
+          port: 5432
+    # c) Redis on 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kinara-redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # d) DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # e) External HTTPS (SMS gateway, third-party APIs)
+    - ports:
+        - protocol: TCP
+          port: 443
+
+---
+# ── 6. PgBouncer egress — external Postgres + DNS ────────────────────────────
+# PgBouncer pods connect to the DigitalOcean managed Postgres cluster
+# (external endpoint, not a pod), and need DNS.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-pgbouncer
+  namespace: kinara-production
+spec:
+  podSelector:
+    matchLabels:
+      app: kinara-pgbouncer
+  policyTypes:
+    - Egress
+  egress:
+    # Managed Postgres (external, any IP) on 5432
+    - ports:
+        - protocol: TCP
+          port: 5432
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
