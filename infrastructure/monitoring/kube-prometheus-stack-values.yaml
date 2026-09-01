@@ -148,11 +148,11 @@ alertmanager:
   config:
     global:
       resolve_timeout: 5m
-      # SMTP — fill in real credentials before enabling email receiver (Phase 4)
-      # smtp_smarthost: 'smtp.example.com:587'
-      # smtp_from: 'alerts@kinaraos.com'
-      # smtp_auth_username: 'alerts@kinaraos.com'
-      # smtp_auth_password: '<REPLACE_WITH_APP_PASSWORD>'
+      smtp_smarthost: 'email-smtp.us-east-1.amazonaws.com:587'
+      smtp_from: 'donalddaglo@gmail.com'
+      smtp_auth_username: 'AKIAVF7ZH7KARBQTNHAG'
+      smtp_auth_password: 'BGlHNnJL9cASwo3pxuAMOek3kdEdBnt87Cz0Tt8Pg28Y'
+      smtp_require_tls: true
 
     route:
       group_by: [alertname, namespace, service]
@@ -176,20 +176,25 @@ alertmanager:
       - name: "null"
 
       - name: email-critical
-        email_configs: []
-        # email_configs:
-        #   - to: 'oncall@kinaraos.com'
-        #     send_resolved: true
-        #     headers:
-        #       subject: '[CRITICAL] Kinara OS {{ .GroupLabels.alertname }}'
+        email_configs:
+          - to: 'donalddaglo@gmail.com'
+            send_resolved: true
+            headers:
+              subject: '[CRITICAL] Kinara OS {{ .GroupLabels.alertname }}'
+            html: |
+              <b>Alert:</b> {{ .GroupLabels.alertname }}<br>
+              <b>Severity:</b> critical<br>
+              {{ range .Alerts }}
+              <p><b>Summary:</b> {{ .Annotations.summary }}<br>
+              {{ .Annotations.description }}</p>
+              {{ end }}
 
       - name: email-warning
-        email_configs: []
-        # email_configs:
-        #   - to: 'team@kinaraos.com'
-        #     send_resolved: true
-        #     headers:
-        #       subject: '[WARNING] Kinara OS {{ .GroupLabels.alertname }}'
+        email_configs:
+          - to: 'donalddaglo@gmail.com'
+            send_resolved: true
+            headers:
+              subject: '[WARNING] Kinara OS {{ .GroupLabels.alertname }}'
 
     inhibit_rules:
       - source_matchers: [severity = critical]
