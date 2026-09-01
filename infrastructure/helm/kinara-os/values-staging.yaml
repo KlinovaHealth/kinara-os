@@ -1,16 +1,16 @@
 # Staging environment overrides
-# Registry: ghcr.io/klinovahealth (images built by CI — NOT DO Container Registry)
+# Registry: registry.digitalocean.com/kinara-registry (same as production)
 # Database: DigitalOcean Managed PostgreSQL cluster (kinara-prod, fra1)
 # Cluster:  staging-kinara (DO Kubernetes, fra1)
 
 global:
-  imageRegistry: ghcr.io/klinovahealth
+  imageRegistry: registry.digitalocean.com/kinara-registry
   imageTag: latest
   imagePullPolicy: Always
   namespace: staging
   jwtPublicKeyPath: /etc/jwt/public.pem
   imagePullSecrets:
-    - name: ghcr-pull-secret
+    - name: registry-kinara-registry
 
 hpa:
   enabled: false

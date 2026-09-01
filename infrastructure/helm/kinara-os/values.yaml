@@ -1,11 +1,11 @@
 global:
-  imageRegistry: ghcr.io/klinovahealth
+  imageRegistry: registry.digitalocean.com/kinara-registry
   imageTag: latest
   imagePullPolicy: Always
   namespace: kinara-production
   jwtPublicKeyPath: /etc/jwt/public.pem
   imagePullSecrets:
-    - name: ghcr-pull-secret
+    - name: registry-kinara-registry
 
 hpa:
   enabled: true
