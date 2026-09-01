@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: registry.digitalocean.com/kinara-registry
-  GO_VERSION: "1.21"
+  GO_VERSION: "1.25"
 
 jobs:
   unit-tests:
@@ -67,8 +67,8 @@ jobs:
           - warehouse-service
           - weather-service
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -103,8 +103,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Start services via Docker Compose
@@ -141,9 +141,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install doctl
-        uses: digitalocean/action-doctl@v2
+        uses: digitalocean/action-doctl@v2.5.2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Log in to DigitalOcean Container Registry
@@ -182,9 +182,9 @@ jobs:
     if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     environment: togo-prod
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install doctl
-        uses: digitalocean/action-doctl@v2
+        uses: digitalocean/action-doctl@v2.5.2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Configure kubectl
