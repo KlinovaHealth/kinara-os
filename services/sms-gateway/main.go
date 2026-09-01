@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/klinova/kinara-os/sms-gateway/db"
 	"github.com/klinova/kinara-os/sms-gateway/handlers"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -27,6 +28,7 @@ func main() {
 
 	r := mux.NewRouter()
 	h.RegisterRoutes(r)
+	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintln(w, `{"status":"ok","service":"sms-gateway"}`)

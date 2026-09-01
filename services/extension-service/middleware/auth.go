@@ -15,6 +15,10 @@ const claimsKey contextKey = "claims"
 func JWT(v *auth.Validator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/metrics" || r.URL.Path == "/health" {
+				next.ServeHTTP(w, r)
+				return
+			}
 			header := r.Header.Get("Authorization")
 			if !strings.HasPrefix(header, "Bearer ") {
 				http.Error(w, `{"success":false,"error":"missing bearer token"}`, http.StatusUnauthorized)

@@ -14,6 +14,8 @@ import (
 	"github.com/klinova/kinara-os/dock-service/handlers"
 	"github.com/klinova/kinara-os/dock-service/middleware"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -43,6 +45,8 @@ func main() {
 
 	api := r.PathPrefix("/api/v1").Subrouter()
 	h.RegisterRoutes(api)
+
+	r.Handle("/metrics", promhttp.Handler())
 
 	srv := &http.Server{
 		Addr:      ":8100",

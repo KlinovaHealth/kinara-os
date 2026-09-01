@@ -22,6 +22,7 @@ import (
 	"github.com/klinova/kinara-os/patient-service/db"
 	"github.com/klinova/kinara-os/patient-service/handlers"
 	"github.com/klinova/kinara-os/patient-service/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type config struct {
@@ -85,6 +86,7 @@ func main() {
 	r.Use(middleware.RateLimit(rdb, 1000))
 
 	// Health endpoints require no auth (checked by Kubernetes liveness probes).
+	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/health", healthCheck).Methods(http.MethodGet)
 	r.HandleFunc("/ready", readyCheck(pool, rdb)).Methods(http.MethodGet)
 

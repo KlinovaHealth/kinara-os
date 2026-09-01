@@ -16,6 +16,7 @@ import (
 	"github.com/klinova/kinara-os/analytics-service/db"
 	"github.com/klinova/kinara-os/analytics-service/handlers"
 	"github.com/klinova/kinara-os/analytics-service/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -43,6 +44,7 @@ func main() {
 	api.Use(middleware.JWT(jwtValidator))
 	h.RegisterRoutes(api)
 
+	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintln(w, `{"status":"ok","service":"analytics-service"}`)
