@@ -25,12 +25,15 @@ dataset for two purposes:
 
 ---
 
-## Data Volumes (defaults)
+## Data Volumes (defaults: 50 clinics × 200 patients)
 
 | Table | DB | Rows |
 |---|---|---|
 | Clinics | kinara_patient | 50 |
 | Patients | kinara_patient | 10,000 |
+| Visits | kinara_clinical | ~55,000 |
+| Prescriptions | kinara_clinical | ~16,500 |
+| Referrals | kinara_referral | ~2,750 |
 | Cooperatives | kinara_cooperative | 10 |
 | Farmers | kinara_farmer | 2,000 |
 | Farm plots | kinara_farmer | ~3,000 |
@@ -40,7 +43,16 @@ dataset for two purposes:
 | Vessels | kinara_vessel | 50 |
 | Vehicles | kinara_fleet | 100 |
 | Shipments | kinara_shipment | 500 |
-| **Total** | | **~17,005** |
+| **Total** | | **~91,255** |
+
+At `--clinics 50 --patients 1000` (50 K patients):
+
+| Table | Rows |
+|---|---|
+| Patients | 50,000 |
+| Visits | ~275,000 |
+| Prescriptions | ~82,500 |
+| Referrals | ~13,750 |
 
 All values scale proportionally with `--clinics` and `--patients` flags.
 
@@ -53,6 +65,19 @@ All four Kinara OS pillars are seeded:
 - **Health**: clinics (50 facilities across 10 African countries), patients
   linked by `tenant_id` to their clinic, with realistic demographics and
   placeholder encrypted PHI fields.
+  - **Visits** (`kinara_clinical.visits`): 3–8 visits per patient over the
+    past 90 days; fields: `visit_id`, `patient_id`, `clinic_id`,
+    `visit_date`, `chief_complaint`, `notes`. Chief complaints drawn from
+    20 Africa primary-care presentations.
+  - **Prescriptions** (`kinara_clinical.prescriptions`): 30 % of visits
+    receive 1–3 prescriptions; fields: `prescription_id`, `visit_id`,
+    `medication_name`, `dosage`, `quantity`, `unit`, `date_prescribed`.
+    Medications drawn from 20 WHO Essential Medicines for African primary care
+    (amoxicillin, artemether-lumefantrine, ORS, metformin, etc.).
+  - **Referrals** (`kinara_referral.referrals`): 5 % of visits generate a
+    referral to a different clinic; fields: `referral_id`, `visit_id`,
+    `from_clinic_id`, `to_clinic_id`, `reason`, `status`
+    (pending / accepted / completed).
 - **Agriculture**: cooperatives, farmers with GPS coordinates and farm size,
   farm plots with crop types, commodity price indices.
 - **Logistics**: vehicles (trucks, pickups, refrigerated), shipments with
@@ -84,6 +109,7 @@ Every synthetic row is identifiable:
 | Table | Tag |
 |---|---|
 | patients, clinics | `tenant_id LIKE 'SYNTH_%'` |
+| visits, prescriptions, referrals | `notes LIKE 'synthetic_load_test%'` |
 | cooperatives | `registration_no LIKE 'COOP-SYNTH-%'` |
 | farmers | `full_name_enc LIKE 'SYNTHETIC_%'` |
 | price_indices | `source = 'synthetic_load_test'` |

@@ -112,6 +112,53 @@ VEHICLE_TYPES = ["truck", "pickup", "motorcycle", "van", "refrigerated", "tanker
 VEHICLE_MAKES  = ["Toyota", "Mercedes", "Mitsubishi", "Isuzu", "MAN", "Renault",
                   "Volvo", "DAF", "Scania", "Nissan"]
 
+CHIEF_COMPLAINTS = [
+    "Fever and chills", "Malaria-like symptoms", "Diarrhoea and vomiting",
+    "Cough and shortness of breath", "Hypertension follow-up", "Diabetes follow-up",
+    "Antenatal visit", "Postnatal check", "Acute respiratory infection",
+    "Wound dressing", "Malnutrition screening", "Anaemia", "Eye infection",
+    "Skin rash", "Urinary tract infection", "Child immunization",
+    "Sickle cell crisis", "Abdominal pain", "Back pain", "General check-up",
+]
+
+MEDICATIONS = [
+    ("Amoxicillin",             "500mg",       "caps"),
+    ("Metformin",               "500mg",       "tabs"),
+    ("Artemether-lumefantrine", "80/480mg",    "tabs"),
+    ("ORS",                     "1 sachet",    "sachets"),
+    ("Zinc sulfate",            "20mg",        "tabs"),
+    ("Cotrimoxazole",           "960mg",       "tabs"),
+    ("Paracetamol",             "500mg",       "tabs"),
+    ("Ibuprofen",               "400mg",       "tabs"),
+    ("Ferrous sulfate",         "200mg",       "tabs"),
+    ("Folic acid",              "5mg",         "tabs"),
+    ("Mebendazole",             "500mg",       "tabs"),
+    ("Albendazole",             "400mg",       "tabs"),
+    ("Ciprofloxacin",           "500mg",       "tabs"),
+    ("Metronidazole",           "400mg",       "tabs"),
+    ("Amlodipine",              "5mg",         "tabs"),
+    ("Lisinopril",              "5mg",         "tabs"),
+    ("Atorvastatin",            "20mg",        "tabs"),
+    ("Glibenclamide",           "5mg",         "tabs"),
+    ("Ceftriaxone",             "1g",          "vials"),
+    ("Vitamin A",               "200,000 IU",  "caps"),
+]
+
+REFERRAL_REASONS = [
+    "Specialist consultation required",
+    "Surgical evaluation needed",
+    "High-risk obstetric care",
+    "Ophthalmology referral",
+    "Mental health assessment",
+    "Oncology evaluation",
+    "Cardiac assessment",
+    "Renal function evaluation",
+    "Paediatric specialist consult",
+    "Physiotherapy referral",
+    "Radiology investigation",
+    "Complicated malaria management",
+]
+
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -154,6 +201,10 @@ def clean_all(host: str, port: int, user: str):
     click.echo("Removing synthetic data …")
 
     db_deletes = {
+        "kinara_clinical":    ["DELETE FROM prescriptions WHERE notes LIKE %s",
+                               "DELETE FROM referrals     WHERE notes LIKE %s",
+                               "DELETE FROM visits        WHERE notes LIKE %s"],
+        "kinara_referral":    ["DELETE FROM referrals WHERE notes LIKE %s"],
         "kinara_patient":     ["DELETE FROM patients    WHERE tenant_id LIKE %s",
                                "DELETE FROM clinics     WHERE name      LIKE %s"],
         "kinara_farmer":      ["DELETE FROM farmers     WHERE country   IS NOT NULL AND full_name_enc LIKE %s",
@@ -190,12 +241,14 @@ def clean_all(host: str, port: int, user: str):
 
 def seed_health(host: str, port: int, user: str,
                 n_clinics: int, patients_per_clinic: int,
-                dry_run: bool, fake: Faker):
+                dry_run: bool, fake: Faker) -> tuple:
+    """Returns (all_clinic_ids, patient_clinic_pairs) for downstream seeders."""
     click.echo(f"\n[Health] {n_clinics} clinics × {patients_per_clinic} patients")
 
-    clinic_ids   = []
-    clinic_rows  = []
-    patient_rows = []
+    clinic_ids          = []
+    clinic_rows         = []
+    patient_rows        = []
+    patient_clinic_pairs = []
 
     clinic_types = ["health_center", "district", "prefectoral", "regional",
                     "dispensary", "health_post", "private", "community", "maternity"]
@@ -216,11 +269,15 @@ def seed_health(host: str, port: int, user: str,
             random.choice(clinic_types),
         ))
 
+    all_clinic_ids = [cid for (cid, _, _) in clinic_ids]
+
     for idx, (cid, cc, region_name) in enumerate(clinic_ids):
         for j in range(patients_per_clinic):
             n = idx * patients_per_clinic + j
+            pid = str(uuid.uuid4())
+            patient_clinic_pairs.append((pid, cid))
             patient_rows.append((
-                str(uuid.uuid4()),
+                pid,
                 f"PAT-SYNTH-{n:07d}",
                 fake.first_name(),
                 fake.last_name(),
@@ -239,7 +296,7 @@ def seed_health(host: str, port: int, user: str,
 
     click.echo(f"  → {len(clinic_rows)} clinics, {len(patient_rows)} patients")
     if dry_run:
-        return
+        return all_clinic_ids, patient_clinic_pairs
 
     with _conn(host, port, user, "kinara_patient") as conn:
         with conn.cursor() as cur:
@@ -256,6 +313,7 @@ def seed_health(host: str, port: int, user: str,
                 patient_rows)
         conn.commit()
     click.echo(f"  ✓ Written")
+    return all_clinic_ids, patient_clinic_pairs
 
 
 def seed_agriculture(host: str, port: int, user: str,
@@ -553,6 +611,121 @@ def seed_logistics(host: str, port: int, user: str,
     click.echo(f"  ✓ Written")
 
 
+def seed_visits(host: str, port: int, user: str,
+                patient_clinic_pairs: list, dry_run: bool) -> list:
+    """Returns visit_clinic_pairs [(visit_id, clinic_id)] for downstream seeders."""
+    n_patients = len(patient_clinic_pairs)
+    click.echo(f"\n[Clinical — Visits] {n_patients} patients, 3–8 visits each")
+
+    visit_rows         = []
+    visit_clinic_pairs = []
+    today              = datetime.date.today()
+
+    for patient_id, clinic_id in patient_clinic_pairs:
+        n_visits = random.randint(3, 8)
+        for _ in range(n_visits):
+            vid        = str(uuid.uuid4())
+            visit_date = today - datetime.timedelta(days=random.randint(0, 89))
+            visit_clinic_pairs.append((vid, clinic_id))
+            visit_rows.append((
+                vid,
+                patient_id,
+                clinic_id,
+                visit_date,
+                random.choice(CHIEF_COMPLAINTS),
+                f"SYNTH visit note. {SYNTH_TAG}",
+            ))
+
+    click.echo(f"  → {len(visit_rows):,} visits")
+    if dry_run:
+        return visit_clinic_pairs
+
+    with _conn(host, port, user, "kinara_clinical") as conn:
+        with conn.cursor() as cur:
+            _batch(cur,
+                "INSERT INTO visits "
+                "(id, patient_id, clinic_id, visit_date, chief_complaint, notes) "
+                "VALUES %s ON CONFLICT DO NOTHING",
+                visit_rows)
+        conn.commit()
+    click.echo(f"  ✓ Written")
+    return visit_clinic_pairs
+
+
+def seed_prescriptions(host: str, port: int, user: str,
+                       visit_clinic_pairs: list, dry_run: bool) -> int:
+    """Generates prescriptions for ~30 % of visits (1–3 per qualifying visit)."""
+    click.echo(f"\n[Clinical — Prescriptions] 30 % of {len(visit_clinic_pairs):,} visits")
+
+    rx_rows = []
+    for visit_id, _ in visit_clinic_pairs:
+        if random.random() > 0.30:
+            continue
+        for _ in range(random.randint(1, 3)):
+            med_name, dosage, unit = random.choice(MEDICATIONS)
+            rx_rows.append((
+                str(uuid.uuid4()),
+                visit_id,
+                med_name,
+                dosage,
+                random.randint(1, 30),
+                unit,
+                datetime.date.today() - datetime.timedelta(days=random.randint(0, 89)),
+            ))
+
+    click.echo(f"  → {len(rx_rows):,} prescriptions")
+    if dry_run:
+        return len(rx_rows)
+
+    with _conn(host, port, user, "kinara_clinical") as conn:
+        with conn.cursor() as cur:
+            _batch(cur,
+                "INSERT INTO prescriptions "
+                "(id, visit_id, medication_name, dosage, quantity, unit, date_prescribed) "
+                "VALUES %s ON CONFLICT DO NOTHING",
+                rx_rows)
+        conn.commit()
+    click.echo(f"  ✓ Written")
+    return len(rx_rows)
+
+
+def seed_referrals(host: str, port: int, user: str,
+                   visit_clinic_pairs: list, all_clinic_ids: list,
+                   dry_run: bool) -> int:
+    """Generates referrals for ~5 % of visits to a different clinic."""
+    click.echo(f"\n[Clinical — Referrals] 5 % of {len(visit_clinic_pairs):,} visits")
+
+    ref_rows = []
+    for visit_id, from_clinic_id in visit_clinic_pairs:
+        if random.random() > 0.05:
+            continue
+        other_clinics = [c for c in all_clinic_ids if c != from_clinic_id]
+        to_clinic_id  = random.choice(other_clinics) if other_clinics else from_clinic_id
+        ref_rows.append((
+            str(uuid.uuid4()),
+            visit_id,
+            from_clinic_id,
+            to_clinic_id,
+            random.choice(REFERRAL_REASONS),
+            random.choice(["pending", "accepted", "completed"]),
+        ))
+
+    click.echo(f"  → {len(ref_rows):,} referrals")
+    if dry_run:
+        return len(ref_rows)
+
+    with _conn(host, port, user, "kinara_referral") as conn:
+        with conn.cursor() as cur:
+            _batch(cur,
+                "INSERT INTO referrals "
+                "(id, visit_id, from_clinic_id, to_clinic_id, reason, status) "
+                "VALUES %s ON CONFLICT DO NOTHING",
+                ref_rows)
+        conn.commit()
+    click.echo(f"  ✓ Written")
+    return len(ref_rows)
+
+
 # ─── CLI ──────────────────────────────────────────────────────────────────────
 
 @click.command()
@@ -596,10 +769,18 @@ def main(host, port, user, clinics, patients, dry_run, clean):
     n_vehicles   = 100
     n_shipments  = max(500, clinics * 10)
 
-    seed_health(host, port, user, clinics, patients, dry_run, fake)
+    all_clinic_ids, patient_clinic_pairs = seed_health(
+        host, port, user, clinics, patients, dry_run, fake)
     seed_agriculture(host, port, user, n_coops, n_farmers, n_prices, dry_run, fake)
     seed_maritime(host, port, user, n_vessels, dry_run, fake)
     seed_logistics(host, port, user, n_vehicles, n_shipments, dry_run, fake)
+
+    visit_clinic_pairs = seed_visits(
+        host, port, user, patient_clinic_pairs, dry_run)
+    n_rx  = seed_prescriptions(host, port, user, visit_clinic_pairs, dry_run)
+    n_ref = seed_referrals(host, port, user, visit_clinic_pairs, all_clinic_ids, dry_run)
+
+    n_visits = len(visit_clinic_pairs)
 
     click.echo("")
     click.echo("=" * 60)
@@ -607,6 +788,9 @@ def main(host, port, user, clinics, patients, dry_run, clean):
     click.echo("=" * 60)
     click.echo(f"  Clinics            : {clinics:>8,}")
     click.echo(f"  Patients           : {clinics * patients:>8,}")
+    click.echo(f"  Visits             : {n_visits:>8,}")
+    click.echo(f"  Prescriptions      : {n_rx:>8,}")
+    click.echo(f"  Referrals          : {n_ref:>8,}")
     click.echo(f"  Cooperatives       : {n_coops:>8,}")
     click.echo(f"  Farmers            : {n_farmers:>8,}")
     click.echo(f"  Farm plots (~2.5×) : {int(n_farmers * 2.5):>8,}")
@@ -616,9 +800,10 @@ def main(host, port, user, clinics, patients, dry_run, clean):
     click.echo(f"  Vessels            : {n_vessels:>8,}")
     click.echo(f"  Vehicles           : {n_vehicles:>8,}")
     click.echo(f"  Shipments          : {n_shipments:>8,}")
-    total = (clinics + clinics * patients + n_coops + n_farmers +
-             int(n_farmers * 2.5) + n_prices + len(PORT_DATA) +
-             sum(p[7] for p in PORT_DATA) + n_vessels + n_vehicles + n_shipments)
+    total = (clinics + clinics * patients + n_visits + n_rx + n_ref +
+             n_coops + n_farmers + int(n_farmers * 2.5) + n_prices +
+             len(PORT_DATA) + sum(p[7] for p in PORT_DATA) +
+             n_vessels + n_vehicles + n_shipments)
     click.echo(f"  ─────────────────────────────")
     click.echo(f"  Total rows         : {total:>8,}")
     click.echo("")
