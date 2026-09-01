@@ -21,38 +21,38 @@ redis:
 # db:    target PostgreSQL database in the managed DO cluster
 services:
   analytics:           { port: 8108, replicas: 2, maxReplicas: 20, db: kinara_analytics }
-  appointment:         { port: 8109, replicas: 2, maxReplicas: 10, db: kinara_appointment }
-  audit:               { port: 8115, replicas: 2, maxReplicas: 8,  db: kinara_audit }
+  appointment:         { port: 8109, replicas: 2, maxReplicas: 10, db: kinara_appointment, metricsHttp: true }
+  audit:               { port: 8115, replicas: 2, maxReplicas: 8,  db: kinara_audit, metricsHttp: true }
   auth:                { port: 8080, replicas: 2, maxReplicas: 10, db: kinara_auth }
   cargo-maritime:      { port: 8101, replicas: 2, maxReplicas: 20, db: kinara_cargo }
   cargo:               { port: 8091, replicas: 2, maxReplicas: 15, db: kinara_cargo }
   clinical:            { port: 8082, replicas: 2, maxReplicas: 10, db: kinara_clinical }
   compliance:          { port: 8096, replicas: 2, maxReplicas: 10, db: kinara_compliance }
   cooperative:         { port: 8087, replicas: 2, maxReplicas: 10, db: kinara_cooperative }
-  crew:                { port: 8110, replicas: 2, maxReplicas: 10, db: kinara_crew }
+  crew:                { port: 8110, replicas: 2, maxReplicas: 10, db: kinara_crew, metricsHttp: true }
   customs:             { port: 8102, replicas: 2, maxReplicas: 10, db: kinara_customs }
   dock:                { port: 8100, replicas: 2, maxReplicas: 15, db: kinara_dock }
   device-registry:     { port: 8721, replicas: 2, maxReplicas: 10, db: kinara_auth }
   documentation:       { port: 8106, replicas: 2, maxReplicas: 10, db: kinara_documentation }
   driver:              { port: 8090, replicas: 2, maxReplicas: 15, db: kinara_transport }
-  extension:           { port: 8126, replicas: 2, maxReplicas: 8,  db: kinara_extension }
-  farmer-finance:      { port: 8112, replicas: 2, maxReplicas: 10, db: kinara_farmer_finance }
+  extension:           { port: 8126, replicas: 2, maxReplicas: 8,  db: kinara_extension, metricsHttp: true }
+  farmer-finance:      { port: 8112, replicas: 2, maxReplicas: 10, db: kinara_farmer_finance, metricsHttp: true }
   farmer:              { port: 8084, replicas: 2, maxReplicas: 15, db: kinara_farmer }
   fleet:               { port: 8089, replicas: 2, maxReplicas: 15, db: kinara_fleet }
   governance:          { port: 8083, replicas: 2, maxReplicas: 8,  db: kinara_governance }
-  health-analytics:    { port: 8110, replicas: 2, maxReplicas: 10, db: kinara_analytics }
-  health-compliance:   { port: 8111, replicas: 2, maxReplicas: 8,  db: kinara_compliance }
-  immunization:        { port: 8121, replicas: 2, maxReplicas: 8,  db: kinara_immunization }
-  input:               { port: 8125, replicas: 2, maxReplicas: 8,  db: kinara_input }
-  irrigation:          { port: 8086, replicas: 2, maxReplicas: 10, db: kinara_irrigation }
-  lab:                 { port: 8122, replicas: 2, maxReplicas: 10, db: kinara_lab }
+  health-analytics:    { port: 8110, replicas: 2, maxReplicas: 10, db: kinara_analytics, metricsHttp: true }
+  health-compliance:   { port: 8111, replicas: 2, maxReplicas: 8,  db: kinara_compliance, metricsHttp: true }
+  immunization:        { port: 8121, replicas: 2, maxReplicas: 8,  db: kinara_immunization, metricsHttp: true }
+  input:               { port: 8125, replicas: 2, maxReplicas: 8,  db: kinara_input, metricsHttp: true }
+  irrigation:          { port: 8086, replicas: 2, maxReplicas: 10, db: kinara_irrigation, metricsHttp: true }
+  lab:                 { port: 8122, replicas: 2, maxReplicas: 10, db: kinara_lab, metricsHttp: true }
   last-mile:           { port: 8094, replicas: 2, maxReplicas: 20, db: kinara_lastmile }
-  livestock:           { port: 8087, replicas: 2, maxReplicas: 10, db: kinara_livestock }
+  livestock:           { port: 8087, replicas: 2, maxReplicas: 10, db: kinara_livestock, metricsHttp: true }
   logistics-analytics: { port: 8097, replicas: 2, maxReplicas: 10, db: kinara_logistics_analytics }
   market:              { port: 8086, replicas: 3, maxReplicas: 20, db: kinara_market }
   notification:        { port: 8085, replicas: 2, maxReplicas: 10, db: kinara_notification }
   offline-sync:        { port: 8722, replicas: 2, maxReplicas: 10, db: kinara_auth }
-  outbreak:            { port: 8123, replicas: 2, maxReplicas: 8,  db: kinara_outbreak }
+  outbreak:            { port: 8123, replicas: 2, maxReplicas: 8,  db: kinara_outbreak, metricsHttp: true }
   patient:             { port: 8081, replicas: 2, maxReplicas: 10, db: kinara_patient }
   payment:             { port: 8107, replicas: 3, maxReplicas: 30, db: kinara_payment }
   pharmacy:            { port: 8117, replicas: 2, maxReplicas: 10, db: kinara_pharmacy }
@@ -61,15 +61,15 @@ services:
   route:               { port: 8092, replicas: 2, maxReplicas: 10, db: kinara_transport }
   shipment:            { port: 8095, replicas: 2, maxReplicas: 20, db: kinara_shipment }
   shipping:            { port: 8103, replicas: 2, maxReplicas: 15, db: kinara_shipping }
-  sms-gateway:         { port: 8200, replicas: 2, maxReplicas: 10, db: kinara_sms, image: sms-gateway }
-  supply-chain:        { port: 8113, replicas: 2, maxReplicas: 10, db: kinara_supply_chain }
-  telemedicine:        { port: 8109, replicas: 2, maxReplicas: 10, db: kinara_telemedicine }
+  sms-gateway:         { port: 8200, replicas: 2, maxReplicas: 10, db: kinara_sms, image: sms-gateway, metricsHttp: true }
+  supply-chain:        { port: 8113, replicas: 2, maxReplicas: 10, db: kinara_supply_chain, metricsHttp: true }
+  telemedicine:        { port: 8109, replicas: 2, maxReplicas: 10, db: kinara_telemedicine, metricsHttp: true }
   trade-finance:       { port: 8105, replicas: 2, maxReplicas: 10, db: kinara_trade_finance }
   transport:           { port: 8093, replicas: 2, maxReplicas: 20, db: kinara_transport }
-  vehicle-tracking:    { port: 8127, replicas: 2, maxReplicas: 10, db: kinara_vehicle_tracking }
-  vessel:              { port: 8093, replicas: 2, maxReplicas: 15, db: kinara_vessel }
-  voyage:              { port: 8119, replicas: 2, maxReplicas: 8,  db: kinara_voyage }
-  wallet:              { port: 8114, replicas: 2, maxReplicas: 10, db: kinara_payment }
+  vehicle-tracking:    { port: 8127, replicas: 2, maxReplicas: 10, db: kinara_vehicle_tracking, metricsHttp: true }
+  vessel:              { port: 8093, replicas: 2, maxReplicas: 15, db: kinara_vessel, metricsHttp: true }
+  voyage:              { port: 8119, replicas: 2, maxReplicas: 8,  db: kinara_voyage, metricsHttp: true }
+  wallet:              { port: 8114, replicas: 2, maxReplicas: 10, db: kinara_payment, metricsHttp: true }
   warehouse:           { port: 8104, replicas: 2, maxReplicas: 15, db: kinara_warehouse }
   weather:             { port: 8088, replicas: 2, maxReplicas: 8,  db: kinara_weather }
 

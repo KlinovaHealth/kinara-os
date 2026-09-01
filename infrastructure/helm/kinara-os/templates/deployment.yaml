@@ -29,6 +29,9 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: {{ $svc.port | quote }}
         prometheus.io/path: "/metrics"
+        {{- if $svc.metricsHttp }}
+        prometheus.io/scheme: "http"
+        {{- end }}
     spec:
       {{- with $.Values.global.imagePullSecrets }}
       imagePullSecrets:
