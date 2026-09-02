@@ -145,7 +145,7 @@ spec:
 ---
 # ── 6. PgBouncer egress — external Postgres + DNS ────────────────────────────
 # PgBouncer pods connect to the DigitalOcean managed Postgres cluster
-# (external endpoint, not a pod), and need DNS.
+# (external endpoint, port 25060 — DO managed DBs use 25060, not 5432), and need DNS.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -158,10 +158,10 @@ spec:
   policyTypes:
     - Egress
   egress:
-    # Managed Postgres (external, any IP) on 5432
+    # DigitalOcean managed Postgres uses port 25060 (not 5432)
     - ports:
         - protocol: TCP
-          port: 5432
+          port: 25060
     # DNS
     - ports:
         - protocol: UDP
