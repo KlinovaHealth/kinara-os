@@ -11,7 +11,7 @@ metadata:
     version: {{ $.Chart.AppVersion }}
     pillar: kinara
 spec:
-  replicas: {{ $svc.replicas }}
+  replicas: {{ $.Values.global.replicaOverride | default $svc.replicas }}
   selector:
     matchLabels:
       app: {{ $name }}-service
