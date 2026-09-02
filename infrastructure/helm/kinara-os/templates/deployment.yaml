@@ -108,11 +108,11 @@ spec:
             {{- toYaml $.Values.defaultResources | nindent 12 }}
             {{- else }}
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: "30m"
+              memory: "64Mi"
             limits:
               cpu: "500m"
-              memory: "512Mi"
+              memory: "256Mi"
             {{- end }}
           securityContext:
             readOnlyRootFilesystem: true
