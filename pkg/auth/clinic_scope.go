@@ -2,10 +2,14 @@ package auth
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type contextKey string
@@ -92,39 +96,111 @@ func JWTMiddleware(v *Validator) func(http.Handler) http.Handler {
 	}
 }
 
-// RequireTenantScope is an HTTP middleware that logs entity_type, tenant_id, clinic_id,
-// and user_id on every request and rejects (403) any request where clinic_id is present
-// but does not belong to the token's tenant.
+// TenantScopeMode controls whether RequireTenantScope blocks on violations or only reports them.
+// Read once at middleware construction from TENANT_SCOPE_MODE env var.
+type TenantScopeMode string
+
+const (
+	TenantScopeModeReport  TenantScopeMode = "report"
+	TenantScopeModeEnforce TenantScopeMode = "enforce"
+)
+
+func tenantScopeModeFromEnv() TenantScopeMode {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("TENANT_SCOPE_MODE")), "enforce") {
+		return TenantScopeModeEnforce
+	}
+	return TenantScopeModeReport
+}
+
+// tenantScopeDecisions counts every RequireTenantScope evaluation.
+// Labels: mode ("report"|"enforce"), would_block ("true"|"false"), service (service name).
+var tenantScopeDecisions = promauto.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "tenant_scope_decisions_total",
+		Help: "Number of tenant scope enforcement decisions evaluated.",
+	},
+	[]string{"mode", "would_block", "service"},
+)
+
+// RequireTenantScope evaluates tenant isolation on every authenticated request.
 //
-// tenantClinics is a func that accepts a tenantID and returns the set of clinic UUIDs
-// belonging to that tenant. Services inject this at wire-up time using their own DB layer.
-// If tenantClinics is nil the middleware only logs (useful during rollout).
-func RequireTenantScope(tenantClinics func(tenantID uuid.UUID) (map[uuid.UUID]struct{}, error)) func(http.Handler) http.Handler {
+// Mode is read once at construction from TENANT_SCOPE_MODE:
+//   - "report" (default): evaluate, log, emit metric — always allow through
+//   - "enforce": 403 on any violation
+//
+// serviceName is the label value on the tenant_scope_decisions_total counter.
+// tenantClinics, if non-nil, verifies that a device-session clinic_id belongs to the
+// token's tenant. Pass nil to report on entity_type/tenant_id presence only.
+func RequireTenantScope(serviceName string, tenantClinics func(tenantID uuid.UUID) (map[uuid.UUID]struct{}, error)) func(http.Handler) http.Handler {
+	mode := tenantScopeModeFromEnv()
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims := ClaimsFromContext(r.Context())
-			if claims == nil {
-				http.Error(w, `{"success":false,"error":{"code":"FORBIDDEN","message":"tenant scope required"}}`, http.StatusForbidden)
-				return
+
+			wouldBlock := false
+			reason := "ok"
+
+			switch {
+			case claims == nil:
+				wouldBlock = true
+				reason = "no_claims"
+
+			case claims.EntityType == "":
+				// Token predates migration 002 — entity not stamped at login.
+				wouldBlock = true
+				reason = "missing_entity_type"
+
+			case claims.ClinicID != nil && *claims.ClinicID != uuid.Nil && tenantClinics != nil:
+				allowed, err := tenantClinics(claims.TenantID)
+				if err != nil {
+					wouldBlock = true
+					reason = "tenant_lookup_error"
+				} else if _, ok := allowed[*claims.ClinicID]; !ok {
+					wouldBlock = true
+					reason = "clinic_not_in_tenant"
+				}
 			}
 
-			// Always log the four tenant context fields for audit
-			_ = claims.EntityType
-			_ = claims.TenantID
-			_ = claims.ClinicID
-			_ = claims.UserID
+			// Safe field extraction — handles nil claims.
+			entityType := ""
+			tenantID := uuid.Nil
+			clinicID := uuid.Nil
+			userID := uuid.Nil
+			if claims != nil {
+				entityType = claims.EntityType
+				tenantID = claims.TenantID
+				userID = claims.UserID
+				if claims.ClinicID != nil {
+					clinicID = *claims.ClinicID
+				}
+			}
 
-			// If a clinic_id is present, verify it belongs to the token's tenant
-			if claims.ClinicID != nil && *claims.ClinicID != uuid.Nil && tenantClinics != nil {
-				allowed, err := tenantClinics(claims.TenantID)
-				if err != nil || allowed == nil {
-					http.Error(w, `{"success":false,"error":{"code":"FORBIDDEN","message":"tenant verification failed"}}`, http.StatusForbidden)
-					return
-				}
-				if _, ok := allowed[*claims.ClinicID]; !ok {
-					http.Error(w, `{"success":false,"error":{"code":"FORBIDDEN","message":"clinic not in tenant"}}`, http.StatusForbidden)
-					return
-				}
+			wouldBlockStr := "false"
+			if wouldBlock {
+				wouldBlockStr = "true"
+			}
+
+			slog.Info("tenant_scope_decision",
+				"mode", string(mode),
+				"would_block", wouldBlock,
+				"reason", reason,
+				"service", serviceName,
+				"path", r.URL.Path,
+				"entity_type", entityType,
+				"tenant_id", tenantID.String(),
+				"clinic_id", clinicID.String(),
+				"user_id", userID.String(),
+			)
+
+			tenantScopeDecisions.WithLabelValues(string(mode), wouldBlockStr, serviceName).Inc()
+
+			if wouldBlock && mode == TenantScopeModeEnforce {
+				http.Error(w,
+					`{"success":false,"error":{"code":"FORBIDDEN","message":"`+reason+`"}}`,
+					http.StatusForbidden,
+				)
+				return
 			}
 
 			next.ServeHTTP(w, r)
