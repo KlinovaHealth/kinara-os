@@ -74,6 +74,8 @@ type UserRow struct {
 	PasswordHash  string     `db:"password_hash"`
 	Status        UserStatus `db:"status"`
 	EmailVerified bool       `db:"email_verified"`
+	EntityType    string     `db:"entity_type"` // "klinova" | "vha"
+	TenantID      uuid.UUID  `db:"tenant_id"`
 	CreatedAt     time.Time  `db:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at"`
 	LastLoginAt   *time.Time `db:"last_login_at"`
@@ -161,6 +163,8 @@ type SessionRow struct {
 	IPAddress        string    `db:"ip_address"`
 	UserAgent        string    `db:"user_agent"`
 	ExpiresAt        time.Time `db:"expires_at"`
+	EntityType       string    `db:"entity_type"`
+	TenantID         uuid.UUID `db:"tenant_id"`
 	CreatedAt        time.Time `db:"created_at"`
 }
 
@@ -186,16 +190,19 @@ type MFADeviceRow struct {
 }
 
 // AccessLog is an immutable record of every authentication event.
+// EntityType and TenantID are nil for pre-auth failures (rate limits, unknown username).
 type AccessLog struct {
-	ID        uuid.UUID       `json:"id"`
-	UserID    *uuid.UUID      `json:"user_id,omitempty"`
-	Action    string          `json:"action"`
-	Resource  string          `json:"resource"`
-	Status    AccessLogStatus `json:"status"`
-	IPAddress string          `json:"ip_address"`
-	UserAgent string          `json:"user_agent"`
-	Details   string          `json:"details,omitempty"`
-	CreatedAt time.Time       `json:"created_at"`
+	ID         uuid.UUID       `json:"id"`
+	UserID     *uuid.UUID      `json:"user_id,omitempty"`
+	Action     string          `json:"action"`
+	Resource   string          `json:"resource"`
+	Status     AccessLogStatus `json:"status"`
+	IPAddress  string          `json:"ip_address"`
+	UserAgent  string          `json:"user_agent"`
+	Details    string          `json:"details,omitempty"`
+	EntityType *string         `json:"entity_type,omitempty"`
+	TenantID   *uuid.UUID      `json:"tenant_id,omitempty"`
+	CreatedAt  time.Time       `json:"created_at"`
 }
 
 // ─── Request / Response types ─────────────────────────────────────────────────

@@ -17,16 +17,19 @@ const (
 )
 
 // Claims is the JWT payload used across Kinara Governance OS.
-// Device sessions populate DeviceID, ClinicID, and Scope; human sessions leave them nil/empty.
+// EntityType and TenantID are set server-side at login from the user's DB record
+// and cannot be supplied or overridden by the client.
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID   uuid.UUID  `json:"uid"`
-	Username string     `json:"username"`
-	Role     string     `json:"role"`
-	Scopes   []string   `json:"scopes"`
-	DeviceID *uuid.UUID `json:"device_id,omitempty"`
-	ClinicID *uuid.UUID `json:"clinic_id,omitempty"`
-	Scope    string     `json:"scope,omitempty"` // e.g. "clinic:uuid"
+	UserID     uuid.UUID  `json:"uid"`
+	Username   string     `json:"username"`
+	Role       string     `json:"role"`
+	Scopes     []string   `json:"scopes"`
+	EntityType string     `json:"entity_type"`          // "klinova" | "vha"
+	TenantID   uuid.UUID  `json:"tenant_id"`             // UUID of the owning tenant row
+	DeviceID   *uuid.UUID `json:"device_id,omitempty"`
+	ClinicID   *uuid.UUID `json:"clinic_id,omitempty"`
+	Scope      string     `json:"scope,omitempty"`       // "clinic:<uuid>" for device sessions
 }
 
 // Issuer signs access tokens with an RSA private key (RS256).
@@ -64,7 +67,8 @@ func NewIssuer(privateKeyPath, publicKeyPath string) (*Issuer, error) {
 }
 
 // IssueAccessToken signs a short-lived JWT (15 min) for API access.
-func (i *Issuer) IssueAccessToken(userID uuid.UUID, username, role string, scopes []string) (string, error) {
+// entityType and tenantID are looked up server-side and cannot be supplied by the client.
+func (i *Issuer) IssueAccessToken(userID uuid.UUID, username, role, entityType string, tenantID uuid.UUID, scopes []string) (string, error) {
 	now := time.Now()
 	claims := &Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -74,10 +78,12 @@ func (i *Issuer) IssueAccessToken(userID uuid.UUID, username, role string, scope
 			ExpiresAt: jwt.NewNumericDate(now.Add(accessTokenTTL)),
 			ID:        uuid.New().String(),
 		},
-		UserID:   userID,
-		Username: username,
-		Role:     role,
-		Scopes:   scopes,
+		UserID:     userID,
+		Username:   username,
+		Role:       role,
+		Scopes:     scopes,
+		EntityType: entityType,
+		TenantID:   tenantID,
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(i.privateKey)
 }
@@ -121,7 +127,8 @@ func (c *Claims) HasScope(scope string) bool {
 // IssueDeviceAccessToken signs a short-lived JWT (5 min) scoped to a single clinic.
 // Device tokens have a "clinic:<clinic_id>" scope claim; all patient-data services
 // must validate this via RequireClinicScope middleware before serving any PHI.
-func (i *Issuer) IssueDeviceAccessToken(staffID, deviceID, clinicID uuid.UUID, role string) (string, error) {
+// entityType and tenantID must be looked up from the staff member's DB record before calling.
+func (i *Issuer) IssueDeviceAccessToken(staffID, deviceID, clinicID uuid.UUID, role, entityType string, tenantID uuid.UUID) (string, error) {
 	now := time.Now()
 	clinicScope := "clinic:" + clinicID.String()
 	claims := &Claims{
@@ -132,13 +139,15 @@ func (i *Issuer) IssueDeviceAccessToken(staffID, deviceID, clinicID uuid.UUID, r
 			ExpiresAt: jwt.NewNumericDate(now.Add(deviceAccessTokenTTL)),
 			ID:        uuid.New().String(),
 		},
-		UserID:   staffID,
-		Username: "",
-		Role:     role,
-		Scopes:   []string{clinicScope},
-		DeviceID: &deviceID,
-		ClinicID: &clinicID,
-		Scope:    clinicScope,
+		UserID:     staffID,
+		Username:   "",
+		Role:       role,
+		Scopes:     []string{clinicScope},
+		EntityType: entityType,
+		TenantID:   tenantID,
+		DeviceID:   &deviceID,
+		ClinicID:   &clinicID,
+		Scope:      clinicScope,
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(i.privateKey)
 }

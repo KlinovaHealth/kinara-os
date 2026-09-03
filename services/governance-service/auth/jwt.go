@@ -11,9 +11,11 @@ import (
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID uuid.UUID `json:"uid"`
-	Role   string    `json:"role"`
-	Scopes []string  `json:"scopes"`
+	UserID     uuid.UUID `json:"uid"`
+	Role       string    `json:"role"`
+	Scopes     []string  `json:"scopes"`
+	EntityType string    `json:"entity_type"` // "klinova" | "vha"
+	TenantID   uuid.UUID `json:"tenant_id"`
 }
 
 type Validator struct {

@@ -12,13 +12,15 @@ import (
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID   uuid.UUID  `json:"uid"`
-	Username string     `json:"username"`
-	Role     string     `json:"role"`
-	Scopes   []string   `json:"scopes"`
-	DeviceID *uuid.UUID `json:"device_id,omitempty"`
-	ClinicID *uuid.UUID `json:"clinic_id,omitempty"`
-	Scope    string     `json:"scope,omitempty"` // "clinic:<uuid>" for device sessions
+	UserID     uuid.UUID  `json:"uid"`
+	Username   string     `json:"username"`
+	Role       string     `json:"role"`
+	Scopes     []string   `json:"scopes"`
+	EntityType string     `json:"entity_type"` // "klinova" | "vha"
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	DeviceID   *uuid.UUID `json:"device_id,omitempty"`
+	ClinicID   *uuid.UUID `json:"clinic_id,omitempty"`
+	Scope      string     `json:"scope,omitempty"` // "clinic:<uuid>" for device sessions
 }
 
 func (c *Claims) IsDeviceSession() bool {

@@ -42,7 +42,7 @@ func (q *Queries) CreateUser(ctx context.Context, p CreateUserParams) (*models.U
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*models.UserRow, error) {
 	row := q.pool.QueryRow(ctx, `
 		SELECT id, username, email, password_hash, status, email_verified,
-		       created_at, updated_at, last_login_at
+		       entity_type, tenant_id, created_at, updated_at, last_login_at
 		FROM users WHERE id = $1`, id)
 	return scanUserRow(row)
 }
@@ -50,7 +50,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (*models.UserRo
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (*models.UserRow, error) {
 	row := q.pool.QueryRow(ctx, `
 		SELECT id, username, email, password_hash, status, email_verified,
-		       created_at, updated_at, last_login_at
+		       entity_type, tenant_id, created_at, updated_at, last_login_at
 		FROM users WHERE username = $1`, username)
 	return scanUserRow(row)
 }
@@ -58,7 +58,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (*mode
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (*models.UserRow, error) {
 	row := q.pool.QueryRow(ctx, `
 		SELECT id, username, email, password_hash, status, email_verified,
-		       created_at, updated_at, last_login_at
+		       entity_type, tenant_id, created_at, updated_at, last_login_at
 		FROM users WHERE email = $1`, email)
 	return scanUserRow(row)
 }
@@ -79,7 +79,7 @@ func scanUserRow(scanner interface{ Scan(...any) error }) (*models.UserRow, erro
 	var u models.UserRow
 	err := scanner.Scan(
 		&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Status,
-		&u.EmailVerified, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt,
+		&u.EmailVerified, &u.EntityType, &u.TenantID, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -285,21 +285,23 @@ type CreateSessionParams struct {
 	IPAddress        string
 	UserAgent        string
 	ExpiresAt        time.Time
+	EntityType       string
+	TenantID         uuid.UUID
 }
 
 func (q *Queries) CreateSession(ctx context.Context, p CreateSessionParams) (*models.SessionRow, error) {
 	row := q.pool.QueryRow(ctx, `
-		INSERT INTO sessions (user_id, refresh_token_hash, mfa_verified, ip_address, user_agent, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, user_id, refresh_token_hash, mfa_verified, ip_address, user_agent, expires_at, created_at`,
-		p.UserID, p.RefreshTokenHash, p.MFAVerified, p.IPAddress, p.UserAgent, p.ExpiresAt,
+		INSERT INTO sessions (user_id, refresh_token_hash, mfa_verified, ip_address, user_agent, expires_at, entity_type, tenant_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, user_id, refresh_token_hash, mfa_verified, ip_address, user_agent, expires_at, entity_type, tenant_id, created_at`,
+		p.UserID, p.RefreshTokenHash, p.MFAVerified, p.IPAddress, p.UserAgent, p.ExpiresAt, p.EntityType, p.TenantID,
 	)
 	return scanSessionRow(row)
 }
 
 func (q *Queries) GetSessionByRefreshHash(ctx context.Context, hash string) (*models.SessionRow, error) {
 	row := q.pool.QueryRow(ctx, `
-		SELECT id, user_id, refresh_token_hash, mfa_verified, ip_address, user_agent, expires_at, created_at
+		SELECT id, user_id, refresh_token_hash, mfa_verified, ip_address, user_agent, expires_at, entity_type, tenant_id, created_at
 		FROM sessions WHERE refresh_token_hash = $1 AND expires_at > NOW()`, hash)
 	return scanSessionRow(row)
 }
@@ -323,7 +325,7 @@ func scanSessionRow(scanner interface{ Scan(...any) error }) (*models.SessionRow
 	var s models.SessionRow
 	err := scanner.Scan(
 		&s.ID, &s.UserID, &s.RefreshTokenHash, &s.MFAVerified,
-		&s.IPAddress, &s.UserAgent, &s.ExpiresAt, &s.CreatedAt,
+		&s.IPAddress, &s.UserAgent, &s.ExpiresAt, &s.EntityType, &s.TenantID, &s.CreatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("session not found or expired")
@@ -385,41 +387,45 @@ func scanMFADeviceRow(scanner interface{ Scan(...any) error }) (*models.MFADevic
 // ─── Access Log ───────────────────────────────────────────────────────────────
 
 type InsertAccessLogParams struct {
-	UserID    *uuid.UUID
-	Action    string
-	Resource  string
-	Status    models.AccessLogStatus
-	IPAddress string
-	UserAgent string
-	Details   string
+	UserID     *uuid.UUID
+	Action     string
+	Resource   string
+	Status     models.AccessLogStatus
+	IPAddress  string
+	UserAgent  string
+	Details    string
+	EntityType *string    // nil for pre-auth failures where tenant is unknown
+	TenantID   *uuid.UUID // nil when EntityType is nil
 }
 
 func (q *Queries) InsertAccessLog(ctx context.Context, p InsertAccessLogParams) error {
 	_, err := q.pool.Exec(ctx, `
-		INSERT INTO access_log (user_id, action, resource, status, ip_address, user_agent, details)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		p.UserID, p.Action, p.Resource, p.Status, p.IPAddress, p.UserAgent, p.Details,
+		INSERT INTO access_log (user_id, action, resource, status, ip_address, user_agent, details, entity_type, tenant_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		p.UserID, p.Action, p.Resource, p.Status, p.IPAddress, p.UserAgent, p.Details, p.EntityType, p.TenantID,
 	)
 	return err
 }
 
 type ListAccessLogParams struct {
-	UserID *uuid.UUID
-	Status *models.AccessLogStatus
-	Page   int
-	Limit  int
+	UserID     *uuid.UUID
+	Status     *models.AccessLogStatus
+	EntityType string // filter to a single tenant; empty = no filter (super-admin only)
+	Page       int
+	Limit      int
 }
 
 func (q *Queries) ListAccessLog(ctx context.Context, p ListAccessLogParams) ([]*models.AccessLog, error) {
 	offset := (p.Page - 1) * p.Limit
 	rows, err := q.pool.Query(ctx, `
-		SELECT id, user_id, action, resource, status, ip_address, user_agent, details, created_at
+		SELECT id, user_id, action, resource, status, ip_address, user_agent, details, entity_type, tenant_id, created_at
 		FROM access_log
 		WHERE ($1::UUID IS NULL OR user_id = $1)
 		  AND ($2::TEXT IS NULL OR status = $2)
+		  AND ($3::TEXT = '' OR entity_type = $3)
 		ORDER BY created_at DESC
-		LIMIT $3 OFFSET $4`,
-		p.UserID, p.Status, p.Limit, offset,
+		LIMIT $4 OFFSET $5`,
+		p.UserID, p.Status, p.EntityType, p.Limit, offset,
 	)
 	if err != nil {
 		return nil, err
@@ -430,7 +436,7 @@ func (q *Queries) ListAccessLog(ctx context.Context, p ListAccessLogParams) ([]*
 		var a models.AccessLog
 		if err := rows.Scan(
 			&a.ID, &a.UserID, &a.Action, &a.Resource, &a.Status,
-			&a.IPAddress, &a.UserAgent, &a.Details, &a.CreatedAt,
+			&a.IPAddress, &a.UserAgent, &a.Details, &a.EntityType, &a.TenantID, &a.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -444,8 +450,9 @@ func (q *Queries) CountAccessLog(ctx context.Context, p ListAccessLogParams) (in
 	err := q.pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM access_log
 		WHERE ($1::UUID IS NULL OR user_id = $1)
-		  AND ($2::TEXT IS NULL OR status = $2)`,
-		p.UserID, p.Status,
+		  AND ($2::TEXT IS NULL OR status = $2)
+		  AND ($3::TEXT = '' OR entity_type = $3)`,
+		p.UserID, p.Status, p.EntityType,
 	).Scan(&count)
 	return count, err
 }

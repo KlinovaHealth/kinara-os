@@ -12,9 +12,11 @@ import (
 // Claims is the JWT payload for Kinara OS tokens.
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID uuid.UUID `json:"uid"`
-	Role   string    `json:"role"`
-	Scopes []string  `json:"scopes"`
+	UserID     uuid.UUID `json:"uid"`
+	Role       string    `json:"role"`
+	Scopes     []string  `json:"scopes"`
+	EntityType string    `json:"entity_type"` // "klinova" | "vha"
+	TenantID   uuid.UUID `json:"tenant_id"`
 }
 
 // Validator verifies RS256-signed JWTs using a PEM public key.

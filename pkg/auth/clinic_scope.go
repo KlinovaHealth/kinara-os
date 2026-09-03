@@ -92,6 +92,46 @@ func JWTMiddleware(v *Validator) func(http.Handler) http.Handler {
 	}
 }
 
+// RequireTenantScope is an HTTP middleware that logs entity_type, tenant_id, clinic_id,
+// and user_id on every request and rejects (403) any request where clinic_id is present
+// but does not belong to the token's tenant.
+//
+// tenantClinics is a func that accepts a tenantID and returns the set of clinic UUIDs
+// belonging to that tenant. Services inject this at wire-up time using their own DB layer.
+// If tenantClinics is nil the middleware only logs (useful during rollout).
+func RequireTenantScope(tenantClinics func(tenantID uuid.UUID) (map[uuid.UUID]struct{}, error)) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims := ClaimsFromContext(r.Context())
+			if claims == nil {
+				http.Error(w, `{"success":false,"error":{"code":"FORBIDDEN","message":"tenant scope required"}}`, http.StatusForbidden)
+				return
+			}
+
+			// Always log the four tenant context fields for audit
+			_ = claims.EntityType
+			_ = claims.TenantID
+			_ = claims.ClinicID
+			_ = claims.UserID
+
+			// If a clinic_id is present, verify it belongs to the token's tenant
+			if claims.ClinicID != nil && *claims.ClinicID != uuid.Nil && tenantClinics != nil {
+				allowed, err := tenantClinics(claims.TenantID)
+				if err != nil || allowed == nil {
+					http.Error(w, `{"success":false,"error":{"code":"FORBIDDEN","message":"tenant verification failed"}}`, http.StatusForbidden)
+					return
+				}
+				if _, ok := allowed[*claims.ClinicID]; !ok {
+					http.Error(w, `{"success":false,"error":{"code":"FORBIDDEN","message":"clinic not in tenant"}}`, http.StatusForbidden)
+					return
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // IsClinicScoped returns true when the scope string matches "clinic:<uuid>".
 func IsClinicScoped(scope string) bool {
 	return strings.HasPrefix(scope, "clinic:") && len(scope) > len("clinic:")

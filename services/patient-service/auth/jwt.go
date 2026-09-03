@@ -21,9 +21,11 @@ var (
 
 // Claims is the payload embedded in every Kinara OS JWT.
 type Claims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Role   string    `json:"role"`
-	Scopes []string  `json:"scopes"`
+	UserID     uuid.UUID `json:"user_id"`
+	Role       string    `json:"role"`
+	Scopes     []string  `json:"scopes"`
+	EntityType string    `json:"entity_type"` // "klinova" | "vha"
+	TenantID   uuid.UUID `json:"tenant_id"`
 	jwt.RegisteredClaims
 }
 

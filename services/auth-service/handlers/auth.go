@@ -132,7 +132,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		h.queries.AssignRole(r.Context(), userRow.ID, role.ID, nil)
 	}
 
-	h.logAccess(r, &userRow.ID, "register", "users", models.LogSuccess, "")
+	h.logAccess(r, &userRow.ID, userRow.EntityType, userRow.TenantID, "register", "users", models.LogSuccess, "")
 
 	user := rowToUser(userRow)
 	h.json(w, http.StatusCreated, models.APIResponse{Success: true, Data: user})
@@ -150,7 +150,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	// Rate limit: 5 attempts per minute per IP
 	allowed, _ := middleware.CheckLoginRateLimit(h.rdb, r)
 	if !allowed {
-		h.logAccess(r, nil, "login", "auth", models.LogFailure, "rate limited: "+req.Username)
+		h.logAccess(r, nil, "", uuid.Nil, "login", "auth", models.LogFailure, "rate limited: "+req.Username)
 		h.json(w, http.StatusTooManyRequests, models.APIResponse{
 			Success: false,
 			Error:   &models.APIError{Code: "RATE_LIMITED", Message: "too many login attempts, wait 1 minute"},
@@ -164,21 +164,21 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		userRow, err = h.queries.GetUserByEmail(r.Context(), req.Username)
 		if err != nil {
 			middleware.RecordFailedLogin(h.rdb, r)
-			h.logAccess(r, nil, "login", "auth", models.LogFailure, "user not found: "+req.Username)
+			h.logAccess(r, nil, "", uuid.Nil, "login", "auth", models.LogFailure, "user not found: "+req.Username)
 			h.unauthorized(w, "invalid credentials")
 			return
 		}
 	}
 
 	if userRow.Status != models.UserActive {
-		h.logAccess(r, &userRow.ID, "login", "auth", models.LogDenied, "account not active")
+		h.logAccess(r, &userRow.ID, userRow.EntityType, userRow.TenantID, "login", "auth", models.LogDenied, "account not active")
 		h.unauthorized(w, "account is not active")
 		return
 	}
 
 	if err := cryptopkg.VerifyPassword(userRow.PasswordHash, req.Password); err != nil {
 		middleware.RecordFailedLogin(h.rdb, r)
-		h.logAccess(r, &userRow.ID, "login", "auth", models.LogFailure, "wrong password")
+		h.logAccess(r, &userRow.ID, userRow.EntityType, userRow.TenantID, "login", "auth", models.LogFailure, "wrong password")
 		h.unauthorized(w, "invalid credentials")
 		return
 	}
@@ -205,15 +205,15 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		// Decrypt TOTP secret and verify
 		secret, err := h.enc.DecryptString(device.SecretEnc)
 		if err != nil || !cryptopkg.VerifyTOTP(secret, req.MFACode) {
-			h.logAccess(r, &userRow.ID, "login_mfa", "auth", models.LogFailure, "invalid MFA code")
+			h.logAccess(r, &userRow.ID, userRow.EntityType, userRow.TenantID, "login_mfa", "auth", models.LogFailure, "invalid MFA code")
 			h.unauthorized(w, "invalid MFA code")
 			return
 		}
 		mfaVerified = true
 	}
 
-	// Issue access token
-	accessToken, err := h.issuer.IssueAccessToken(userRow.ID, userRow.Username, primaryRole, roles)
+	// Issue access token — entity_type and tenant_id come from the DB row, never from the client
+	accessToken, err := h.issuer.IssueAccessToken(userRow.ID, userRow.Username, primaryRole, userRow.EntityType, userRow.TenantID, roles)
 	if err != nil {
 		h.internalError(w, err)
 		return
@@ -234,6 +234,8 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		IPAddress:        remoteIP(r),
 		UserAgent:        r.UserAgent(),
 		ExpiresAt:        sessionExpiry,
+		EntityType:       userRow.EntityType,
+		TenantID:         userRow.TenantID,
 	})
 	if err != nil {
 		h.internalError(w, err)
@@ -241,7 +243,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.queries.UpdateLastLogin(r.Context(), userRow.ID)
-	h.logAccess(r, &userRow.ID, "login", "auth", models.LogSuccess, "")
+	h.logAccess(r, &userRow.ID, userRow.EntityType, userRow.TenantID, "login", "auth", models.LogSuccess, "")
 
 	user := rowToUser(userRow)
 	h.json(w, http.StatusOK, models.APIResponse{
@@ -288,7 +290,7 @@ func (h *Handler) refreshToken(w http.ResponseWriter, r *http.Request) {
 		primaryRole = roles[0]
 	}
 
-	accessToken, err := h.issuer.IssueAccessToken(userRow.ID, userRow.Username, primaryRole, roles)
+	accessToken, err := h.issuer.IssueAccessToken(userRow.ID, userRow.Username, primaryRole, userRow.EntityType, userRow.TenantID, roles)
 	if err != nil {
 		h.internalError(w, err)
 		return
@@ -309,9 +311,11 @@ func (h *Handler) refreshToken(w http.ResponseWriter, r *http.Request) {
 		IPAddress:        remoteIP(r),
 		UserAgent:        r.UserAgent(),
 		ExpiresAt:        time.Now().Add(7 * 24 * time.Hour),
+		EntityType:       userRow.EntityType,
+		TenantID:         userRow.TenantID,
 	})
 
-	h.logAccess(r, &userRow.ID, "token_refresh", "auth", models.LogSuccess, "")
+	h.logAccess(r, &userRow.ID, userRow.EntityType, userRow.TenantID, "token_refresh", "auth", models.LogSuccess, "")
 
 	h.json(w, http.StatusOK, models.APIResponse{
 		Success: true,
@@ -466,7 +470,7 @@ func (h *Handler) enrollMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logAccess(r, &claims.UserID, "mfa_enroll", "mfa_devices", models.LogSuccess, "")
+	h.logAccess(r, &claims.UserID, claims.EntityType, claims.TenantID, "mfa_enroll", "mfa_devices", models.LogSuccess, "")
 
 	h.json(w, http.StatusCreated, models.APIResponse{
 		Success: true,
@@ -506,7 +510,7 @@ func (h *Handler) verifyMFA(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !cryptopkg.VerifyTOTP(secret, req.Code) {
-		h.logAccess(r, &claims.UserID, "mfa_verify", "mfa_devices", models.LogFailure, "invalid code")
+		h.logAccess(r, &claims.UserID, claims.EntityType, claims.TenantID, "mfa_verify", "mfa_devices", models.LogFailure, "invalid code")
 		h.json(w, http.StatusUnauthorized, models.APIResponse{
 			Success: false,
 			Error:   &models.APIError{Code: "INVALID_MFA", Message: "invalid MFA code"},
@@ -519,7 +523,7 @@ func (h *Handler) verifyMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logAccess(r, &claims.UserID, "mfa_verify", "mfa_devices", models.LogSuccess, "")
+	h.logAccess(r, &claims.UserID, claims.EntityType, claims.TenantID, "mfa_verify", "mfa_devices", models.LogSuccess, "")
 	h.json(w, http.StatusOK, models.APIResponse{
 		Success: true,
 		Data:    map[string]string{"status": "mfa_enrolled"},
@@ -559,7 +563,7 @@ func (h *Handler) generateAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logAccess(r, &claims.UserID, "apikey_create", "api_keys", models.LogSuccess, req.Name)
+	h.logAccess(r, &claims.UserID, claims.EntityType, claims.TenantID, "apikey_create", "api_keys", models.LogSuccess, req.Name)
 
 	h.json(w, http.StatusCreated, models.APIResponse{
 		Success: true,
@@ -646,7 +650,7 @@ func (h *Handler) issueCert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logAccess(r, &claims.UserID, "cert_issue", req.ServiceName, models.LogSuccess, "")
+	h.logAccess(r, &claims.UserID, claims.EntityType, claims.TenantID, "cert_issue", req.ServiceName, models.LogSuccess, "")
 	h.json(w, http.StatusCreated, models.APIResponse{Success: true, Data: bundle})
 }
 
@@ -724,15 +728,24 @@ func (h *Handler) decryptProfile(row *models.UserProfileRow) (*models.UserProfil
 	}, nil
 }
 
-func (h *Handler) logAccess(r *http.Request, userID *uuid.UUID, action, resource string, status models.AccessLogStatus, details string) {
+// logAccess records an auth event. Pass entityType="" and tenantID=uuid.Nil for pre-auth failures.
+func (h *Handler) logAccess(r *http.Request, userID *uuid.UUID, entityType string, tenantID uuid.UUID, action, resource string, status models.AccessLogStatus, details string) {
+	var et *string
+	var tid *uuid.UUID
+	if entityType != "" {
+		et = &entityType
+		tid = &tenantID
+	}
 	h.queries.InsertAccessLog(r.Context(), db.InsertAccessLogParams{
-		UserID:    userID,
-		Action:    action,
-		Resource:  resource,
-		Status:    status,
-		IPAddress: remoteIP(r),
-		UserAgent: r.UserAgent(),
-		Details:   details,
+		UserID:     userID,
+		Action:     action,
+		Resource:   resource,
+		Status:     status,
+		IPAddress:  remoteIP(r),
+		UserAgent:  r.UserAgent(),
+		Details:    details,
+		EntityType: et,
+		TenantID:   tid,
 	})
 }
 

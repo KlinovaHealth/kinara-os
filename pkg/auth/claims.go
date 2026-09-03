@@ -16,15 +16,19 @@ import (
 
 // Claims is the canonical JWT payload for Kinara Governance OS.
 // All services validate tokens using this struct.
+// EntityType and TenantID are signed by the auth-service at login from the user's DB record;
+// they are never supplied or overridden by the client.
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID   uuid.UUID  `json:"uid"`
-	Username string     `json:"username"`
-	Role     string     `json:"role"`
-	Scopes   []string   `json:"scopes"`
-	DeviceID *uuid.UUID `json:"device_id,omitempty"`
-	ClinicID *uuid.UUID `json:"clinic_id,omitempty"`
-	Scope    string     `json:"scope,omitempty"` // "clinic:<uuid>" for device sessions
+	UserID     uuid.UUID  `json:"uid"`
+	Username   string     `json:"username"`
+	Role       string     `json:"role"`
+	Scopes     []string   `json:"scopes"`
+	EntityType string     `json:"entity_type"`        // "klinova" | "vha"
+	TenantID   uuid.UUID  `json:"tenant_id"`           // UUID of the owning tenant row
+	DeviceID   *uuid.UUID `json:"device_id,omitempty"`
+	ClinicID   *uuid.UUID `json:"clinic_id,omitempty"`
+	Scope      string     `json:"scope,omitempty"`     // "clinic:<uuid>" for device sessions
 }
 
 // IsDeviceSession returns true when the token was issued for a scoped device.
