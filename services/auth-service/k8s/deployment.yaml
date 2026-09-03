@@ -76,6 +76,8 @@ spec:
               value: /app/certs/ca.crt
             - name: CA_KEY_PATH
               value: /app/certs/ca.key
+            - name: TENANT_SCOPE_MODE
+              value: "report"
           volumeMounts:
             - name: tls-certs
               mountPath: /app/certs

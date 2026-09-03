@@ -45,6 +45,11 @@ func New(
 
 // Register mounts all auth routes.
 func (h *Handler) Register(r *mux.Router, jwtMiddleware func(http.Handler) http.Handler) {
+	// Traefik forwardAuth endpoint — called on every inbound request before routing.
+	// Accepts any method; Traefik forwards the original request method unchanged.
+	// Must appear BEFORE any method-restricted routes that share a path prefix.
+	r.HandleFunc("/api/v1/validate", h.forwardAuth)
+
 	// Public endpoints (no JWT required)
 	r.HandleFunc("/api/v1/auth/register", h.register).Methods(http.MethodPost)
 	r.HandleFunc("/api/v1/auth/login", h.login).Methods(http.MethodPost)

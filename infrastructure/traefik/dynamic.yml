@@ -7,6 +7,10 @@ http:
           - "X-User-ID"
           - "X-User-Role"
           - "X-Tenant-ID"
+          - "X-Entity-Type"
+          - "X-Scope-Would-Block"
+          - "X-Scope-Reason"
+          - "X-User-Scopes"
         trustForwardHeader: true
 
     rate-limit-default:
