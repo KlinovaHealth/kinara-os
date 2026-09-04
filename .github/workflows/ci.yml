@@ -72,6 +72,14 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
+      - name: Bootstrap workspace sums
+        run: |
+          if [ ! -f pkg/auth/go.sum ]; then
+            cd pkg/auth && go mod tidy && cd ../..
+          fi
+          if [ ! -f go.work.sum ]; then
+            go work sync
+          fi
       - name: Test ${{ matrix.service }}
         run: |
           cd services/${{ matrix.service }}
