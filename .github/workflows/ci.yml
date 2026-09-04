@@ -130,6 +130,7 @@ jobs:
           cd tests/integration
           go test ./... -v -timeout 120s
         env:
+          GOWORK: "off"
           KINARA_API_URL: http://localhost
           FARMER_URL: http://localhost:8084
           MARKET_URL: http://localhost:8086
