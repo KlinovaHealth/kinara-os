@@ -72,6 +72,8 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
+      - name: Sync workspace checksums
+        run: go work sync
       - name: Test ${{ matrix.service }}
         run: |
           cd services/${{ matrix.service }}

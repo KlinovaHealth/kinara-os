@@ -1,0 +1,43 @@
+name: Generate go.work.sum
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: go work sync and commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.25"
+          cache: false
+      - name: Run go work sync
+        run: go work sync
+      - name: Confirm go.work.sum generated
+        run: |
+          if [ ! -f go.work.sum ]; then
+            echo "ERROR: go.work.sum was not generated"
+            exit 1
+          fi
+          echo "go.work.sum generated — line count: $(wc -l < go.work.sum)"
+          head -5 go.work.sum
+      - name: Commit and push go.work.sum
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add go.work.sum
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "fix: add go.work.sum for workspace dependency resolution
+
+Resolves unit-test CI failures caused by missing checksums for
+prometheus/client_golang added to pkg/auth in f74bcb5.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+          git push origin main
