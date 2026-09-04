@@ -91,7 +91,9 @@ services:
 
   # ── HEALTH PILLAR ─────────────────────────────────────────────────────
   auth-service:
-    build: ../../services/auth-service
+    build:
+      context: ../..
+      dockerfile: services/auth-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -116,7 +118,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   clinical-service:
-    build: ../../services/clinical-service
+    build:
+      context: ../..
+      dockerfile: services/clinical-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -125,7 +129,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   governance-service:
-    build: ../../services/governance-service
+    build:
+      context: ../..
+      dockerfile: services/governance-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -134,7 +140,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   appointment-service:
-    build: ../../services/appointment-service
+    build:
+      context: ../..
+      dockerfile: services/appointment-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -143,7 +151,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   lab-service:
-    build: ../../services/lab-service
+    build:
+      context: ../..
+      dockerfile: services/lab-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -152,7 +162,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   pharmacy-service:
-    build: ../../services/pharmacy-service
+    build:
+      context: ../..
+      dockerfile: services/pharmacy-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -161,7 +173,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   referral-service:
-    build: ../../services/referral-service
+    build:
+      context: ../..
+      dockerfile: services/referral-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -170,7 +184,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   immunization-service:
-    build: ../../services/immunization-service
+    build:
+      context: ../..
+      dockerfile: services/immunization-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -179,7 +195,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   outbreak-service:
-    build: ../../services/outbreak-service
+    build:
+      context: ../..
+      dockerfile: services/outbreak-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -215,7 +233,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   cooperative-service:
-    build: ../../services/cooperative-service
+    build:
+      context: ../..
+      dockerfile: services/cooperative-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -224,7 +244,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   weather-service:
-    build: ../../services/weather-service
+    build:
+      context: ../..
+      dockerfile: services/weather-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -233,7 +255,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   livestock-service:
-    build: ../../services/livestock-service
+    build:
+      context: ../..
+      dockerfile: services/livestock-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -242,7 +266,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   irrigation-service:
-    build: ../../services/irrigation-service
+    build:
+      context: ../..
+      dockerfile: services/irrigation-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -251,7 +277,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   input-service:
-    build: ../../services/input-service
+    build:
+      context: ../..
+      dockerfile: services/input-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -261,7 +289,9 @@ services:
 
   # ── LOGISTICS PILLAR ──────────────────────────────────────────────────
   fleet-service:
-    build: ../../services/fleet-service
+    build:
+      context: ../..
+      dockerfile: services/fleet-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -270,7 +300,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   driver-service:
-    build: ../../services/driver-service
+    build:
+      context: ../..
+      dockerfile: services/driver-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -279,7 +311,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   cargo-service:
-    build: ../../services/cargo-service
+    build:
+      context: ../..
+      dockerfile: services/cargo-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -288,7 +322,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   route-service:
-    build: ../../services/route-service
+    build:
+      context: ../..
+      dockerfile: services/route-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -297,7 +333,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   transport-service:
-    build: ../../services/transport-service
+    build:
+      context: ../..
+      dockerfile: services/transport-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -306,7 +344,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   last-mile-service:
-    build: ../../services/last-mile-service
+    build:
+      context: ../..
+      dockerfile: services/last-mile-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -315,7 +355,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   shipment-service:
-    build: ../../services/shipment-service
+    build:
+      context: ../..
+      dockerfile: services/shipment-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -324,7 +366,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   compliance-service:
-    build: ../../services/compliance-service
+    build:
+      context: ../..
+      dockerfile: services/compliance-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -333,7 +377,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   logistics-analytics-service:
-    build: ../../services/logistics-analytics-service
+    build:
+      context: ../..
+      dockerfile: services/logistics-analytics-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -342,7 +388,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   warehouse-service:
-    build: ../../services/warehouse-service
+    build:
+      context: ../..
+      dockerfile: services/warehouse-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -352,7 +400,9 @@ services:
 
   # ── MARITIME PILLAR ───────────────────────────────────────────────────
   port-service:
-    build: ../../services/port-service
+    build:
+      context: ../..
+      dockerfile: services/port-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -361,7 +411,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   vessel-service:
-    build: ../../services/vessel-service
+    build:
+      context: ../..
+      dockerfile: services/vessel-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -370,7 +422,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   dock-service:
-    build: ../../services/dock-service
+    build:
+      context: ../..
+      dockerfile: services/dock-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -379,7 +433,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   cargo-maritime-service:
-    build: ../../services/cargo-maritime-service
+    build:
+      context: ../..
+      dockerfile: services/cargo-maritime-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -388,7 +444,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   customs-service:
-    build: ../../services/customs-service
+    build:
+      context: ../..
+      dockerfile: services/customs-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -397,7 +455,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   shipping-service:
-    build: ../../services/shipping-service
+    build:
+      context: ../..
+      dockerfile: services/shipping-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -406,7 +466,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   trade-finance-service:
-    build: ../../services/trade-finance-service
+    build:
+      context: ../..
+      dockerfile: services/trade-finance-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -415,7 +477,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   crew-service:
-    build: ../../services/crew-service
+    build:
+      context: ../..
+      dockerfile: services/crew-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -424,7 +488,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   voyage-service:
-    build: ../../services/voyage-service
+    build:
+      context: ../..
+      dockerfile: services/voyage-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -434,7 +500,9 @@ services:
 
   # ── CROSS-PILLAR ──────────────────────────────────────────────────────
   notification-service:
-    build: ../../services/notification-service
+    build:
+      context: ../..
+      dockerfile: services/notification-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -456,7 +524,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   documentation-service:
-    build: ../../services/documentation-service
+    build:
+      context: ../..
+      dockerfile: services/documentation-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -465,7 +535,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   analytics-service:
-    build: ../../services/analytics-service
+    build:
+      context: ../..
+      dockerfile: services/analytics-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
