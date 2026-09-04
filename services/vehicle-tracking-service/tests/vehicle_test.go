@@ -108,7 +108,7 @@ func newRouter(store handlers.Store) *mux.Router {
 }
 
 func withClaims(r *http.Request, role string) *http.Request {
-	claims := &auth.Claims{UserID: uuid.New(), Role: role, TenantID: "TG"}
+	claims := &auth.Claims{UserID: uuid.New(), Role: role, TenantID: uuid.Nil}
 	ctx := middleware.SetClaims(r.Context(), claims)
 	return r.WithContext(ctx)
 }

@@ -121,13 +121,13 @@ func newRouter(store handlers.Store) *mux.Router {
 }
 
 func withClaims(r *http.Request, role string) *http.Request {
-	claims := &auth.Claims{UserID: uuid.New(), Role: role, TenantID: "TG"}
+	claims := &auth.Claims{UserID: uuid.New(), Role: role, TenantID: uuid.Nil}
 	ctx := middleware.SetClaims(r.Context(), claims)
 	return r.WithContext(ctx)
 }
 
 func withClaimsUserID(r *http.Request, role string, userID uuid.UUID) *http.Request {
-	claims := &auth.Claims{UserID: userID, Role: role, TenantID: "TG"}
+	claims := &auth.Claims{UserID: userID, Role: role, TenantID: uuid.Nil}
 	ctx := middleware.SetClaims(r.Context(), claims)
 	return r.WithContext(ctx)
 }
@@ -174,7 +174,7 @@ func seedConsultation(store *mockStore, farmerID uuid.UUID) uuid.UUID {
 		Topic:      "Pest control",
 		CropType:   "maize",
 		Status:     "pending",
-		TenantID:   "TG",
+		TenantID: uuid.Nil,
 		BookedAt:   time.Now().UTC(),
 	}
 	return id

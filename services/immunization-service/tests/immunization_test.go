@@ -65,13 +65,13 @@ func (m *mockStore) InsertAudit(_ context.Context, _ models.ImmunizationRecord, 
 // ---------------------------------------------------------------------------
 
 func nurseCtx() context.Context {
-	c := &auth.Claims{Role: "nurse", TenantID: "tg"}
+	c := &auth.Claims{Role: "nurse", TenantID: uuid.Nil}
 	c.UserID = uuid.New()
 	return middleware.SetClaims(context.Background(), c)
 }
 
 func patientCtx() context.Context {
-	c := &auth.Claims{Role: "patient", TenantID: "tg"}
+	c := &auth.Claims{Role: "patient", TenantID: uuid.Nil}
 	c.UserID = uuid.New()
 	return middleware.SetClaims(context.Background(), c)
 }

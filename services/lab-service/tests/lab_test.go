@@ -69,19 +69,19 @@ func (m *mockStore) InsertAudit(_ context.Context, _, _, _ string) error {
 // ---------------------------------------------------------------------------
 
 func doctorCtx() context.Context {
-	c := &auth.Claims{Role: "doctor", TenantID: "tg"}
+	c := &auth.Claims{Role: "doctor", TenantID: uuid.Nil}
 	c.UserID = uuid.New()
 	return middleware.SetClaims(context.Background(), c)
 }
 
 func labTechCtx() context.Context {
-	c := &auth.Claims{Role: "lab_tech", TenantID: "tg"}
+	c := &auth.Claims{Role: "lab_tech", TenantID: uuid.Nil}
 	c.UserID = uuid.New()
 	return middleware.SetClaims(context.Background(), c)
 }
 
 func patientCtx() context.Context {
-	c := &auth.Claims{Role: "patient", TenantID: "tg"}
+	c := &auth.Claims{Role: "patient", TenantID: uuid.Nil}
 	c.UserID = uuid.New()
 	return middleware.SetClaims(context.Background(), c)
 }
@@ -115,7 +115,7 @@ func sampleOrder(id uuid.UUID) *models.LabOrder {
 		TestName:  "Hemoglobin",
 		Priority:  "routine",
 		Status:    models.OrderPending,
-		TenantID:  "tg",
+		TenantID: uuid.Nil,
 		OrderedAt: time.Now().UTC(),
 	}
 }

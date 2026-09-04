@@ -130,7 +130,7 @@ func authCtx(r *http.Request, role string) *http.Request {
 	claims := &auth.Claims{
 		UserID:   uuid.New(),
 		Role:     role,
-		TenantID: "tenant-test",
+		TenantID: uuid.Nil,
 	}
 	return r.WithContext(middleware.SetClaims(r.Context(), claims))
 }

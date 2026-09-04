@@ -61,7 +61,7 @@ func (m *mockStore) UpsertOutbreak(_ context.Context, diseaseCode, clinicID, dis
 		ClinicID:    clinicID,
 		CaseCount:   caseCount,
 		Status:      "active",
-		TenantID:    "test",
+		TenantID: uuid.Nil,
 		DetectedAt:  time.Now().UTC(),
 	}
 	m.mu.Lock()
@@ -143,7 +143,7 @@ func claimsCtx(role string) *auth.Claims {
 	return &auth.Claims{
 		UserID:   uuid.New(),
 		Role:     role,
-		TenantID: "test-tenant",
+		TenantID: uuid.Nil,
 	}
 }
 
