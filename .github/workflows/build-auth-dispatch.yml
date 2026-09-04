@@ -1,0 +1,51 @@
+name: Build auth-service (dispatch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Git SHA to build and tag the image with"
+        required: true
+        type: string
+
+env:
+  REGISTRY: registry.digitalocean.com/kinara-registry
+
+jobs:
+  build-auth-service:
+    name: Build & Push auth-service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.sha }}
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2.5.2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Log in to DigitalOcean Container Registry
+        run: doctl registry login --expiry-seconds 3600
+      - name: Build auth-service
+        run: |
+          docker build \
+            -t $REGISTRY/auth-service:${{ inputs.sha }} \
+            services/auth-service/
+      - name: Push auth-service
+        run: |
+          push_with_retry() {
+            local image=$1
+            for attempt in 1 2 3; do
+              docker push "$image" && return 0
+              echo "Push attempt $attempt failed, retrying in 10s..."
+              sleep 10
+            done
+            echo "All push attempts failed for $image"
+            return 1
+          }
+          push_with_retry $REGISTRY/auth-service:${{ inputs.sha }}
+      - name: Confirm push
+        run: |
+          echo "Built and pushed: $REGISTRY/auth-service:${{ inputs.sha }}"
+          doctl registry repository list-tags auth-service --format Tag,UpdatedAt | grep "${{ inputs.sha }}" || echo "WARNING: tag not visible in registry yet"
