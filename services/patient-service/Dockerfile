@@ -10,11 +10,12 @@ ENV GONOSUMDB=*
 RUN apk add --no-cache git ca-certificates tzdata
 
 # Download dependencies first (layer cache optimisation)
-COPY go.mod ./
+COPY services/patient-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
 
 # Copy source and build
-COPY . .
+COPY services/patient-service/. .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s -X main.version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)" \
     -o /patient-service ./main.go

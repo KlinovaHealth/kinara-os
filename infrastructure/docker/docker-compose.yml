@@ -103,7 +103,9 @@ services:
       redis: { condition: service_healthy }
 
   patient-service:
-    build: ../../services/patient-service
+    build:
+      context: ../..
+      dockerfile: services/patient-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -187,7 +189,9 @@ services:
 
   # ── AGRICULTURE PILLAR ────────────────────────────────────────────────
   farmer-service:
-    build: ../../services/farmer-service
+    build:
+      context: ../..
+      dockerfile: services/farmer-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -198,7 +202,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   market-service:
-    build: ../../services/market-service
+    build:
+      context: ../..
+      dockerfile: services/market-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -437,7 +443,9 @@ services:
     depends_on: [postgres, redis, auth-service]
 
   payment-service:
-    build: ../../services/payment-service
+    build:
+      context: ../..
+      dockerfile: services/payment-service/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env
@@ -467,7 +475,9 @@ services:
 
   # ── SMS GATEWAY ───────────────────────────────────────────────────────
   sms-gateway:
-    build: ../../services/sms-gateway
+    build:
+      context: ../..
+      dockerfile: services/sms-gateway/Dockerfile
     <<: *service-defaults
     environment:
       <<: *service-env

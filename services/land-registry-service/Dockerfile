@@ -6,10 +6,11 @@ ENV GONOSUMDB=*
 
 RUN apk --no-cache add git
 
-COPY go.mod ./
+COPY services/land-registry-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
 
-COPY . .
+COPY services/land-registry-service/. .
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s" \

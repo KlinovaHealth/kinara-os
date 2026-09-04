@@ -3,9 +3,10 @@ WORKDIR /app
 ENV GOFLAGS=-mod=mod
 ENV GONOSUMDB=*
 
-COPY go.mod ./
+COPY services/customs-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
-COPY . .
+COPY services/customs-service/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -o customs-service .
 
 FROM gcr.io/distroless/static-debian12

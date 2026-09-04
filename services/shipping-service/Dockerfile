@@ -3,9 +3,10 @@ WORKDIR /app
 ENV GOFLAGS=-mod=mod
 ENV GONOSUMDB=*
 
-COPY go.mod ./
+COPY services/shipping-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
-COPY . .
+COPY services/shipping-service/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -o shipping-service .
 
 FROM gcr.io/distroless/static-debian12

@@ -4,9 +4,10 @@ ENV GOFLAGS=-mod=mod
 ENV GONOSUMDB=*
 
 RUN apk add --no-cache git ca-certificates
-COPY go.mod ./
+COPY services/fleet-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
-COPY . .
+COPY services/fleet-service/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o fleet-service .
 
 FROM scratch

@@ -3,9 +3,10 @@ WORKDIR /app
 ENV GOFLAGS=-mod=mod
 ENV GONOSUMDB=*
 
-COPY go.mod ./
+COPY services/analytics-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
-COPY . .
+COPY services/analytics-service/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -o analytics-service ./main.go
 
 FROM alpine:3.19

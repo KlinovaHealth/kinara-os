@@ -6,10 +6,11 @@ ENV GONOSUMDB=*
 
 RUN apk --no-cache add git
 
-COPY go.mod ./
+COPY services/marine-inspection-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
 
-COPY . .
+COPY services/marine-inspection-service/. .
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s" \

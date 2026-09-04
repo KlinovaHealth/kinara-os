@@ -4,9 +4,10 @@ ENV GOFLAGS=-mod=mod
 ENV GONOSUMDB=*
 
 RUN apk add --no-cache git ca-certificates
-COPY go.mod ./
+COPY services/livestock-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
-COPY . .
+COPY services/livestock-service/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o livestock-service .
 
 FROM scratch

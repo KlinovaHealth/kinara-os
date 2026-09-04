@@ -167,7 +167,7 @@ jobs:
             name=$(basename $svc)
             if [ -f "$svc/Dockerfile" ]; then
               echo "Building $name..."
-              docker build -t $REGISTRY/$name:${{ github.sha }} -t $REGISTRY/$name:latest $svc
+              docker build -f $svc/Dockerfile -t $REGISTRY/$name:${{ github.sha }} -t $REGISTRY/$name:latest .
               push_with_retry $REGISTRY/$name:${{ github.sha }}
               push_with_retry $REGISTRY/$name:latest
             fi

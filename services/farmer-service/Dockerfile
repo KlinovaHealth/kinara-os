@@ -7,10 +7,11 @@ ENV GONOSUMDB=*
 
 RUN apk --no-cache add git
 
-COPY go.mod ./
+COPY services/farmer-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
 
-COPY . .
+COPY services/farmer-service/. .
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s" \

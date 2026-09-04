@@ -3,9 +3,10 @@ WORKDIR /app
 ENV GOFLAGS=-mod=mod
 ENV GONOSUMDB=*
 
-COPY go.mod ./
+COPY services/trade-finance-service/go.mod ./
+COPY pkg/auth /pkg/auth
 RUN go mod download
-COPY . .
+COPY services/trade-finance-service/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -o trade-finance-service .
 
 FROM gcr.io/distroless/static-debian12
