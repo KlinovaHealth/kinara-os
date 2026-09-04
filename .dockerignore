@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# CI
+.github
+
+# Docs and non-build assets
+*.md
+dashboard/
+site/
+docs/
+diagrams/
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+
+# Helm/infra (not needed in build context)
+infrastructure/helm/
+infrastructure/flyway/
+infrastructure/pgbouncer/
+infrastructure/traefik/
+
+# Test files outside services/
+tests/
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Secrets and certs
+.env
+.env.*
+*.pem
+*-private.pem
+*.key
+certs/
+
+# Wrangler cache
+.wrangler/
