@@ -17,7 +17,7 @@
 
 | Severity | Count | Status |
 |---|---|---|
-| CRITICAL | 4 | 1 resolved (C1 TLS); 3 remaining require dev work (C2, C3 CVEs; C4 FALSE POSITIVE) |
+| CRITICAL | 5 | 2 resolved (C1 TLS, C5 DB firewall); 3 remaining require dev work (C2, C3 CVEs; C4 FALSE POSITIVE) |
 | HIGH | 5 | Remediation required before Gates review |
 | MEDIUM | 5 | Address within 30 days |
 | INFO / PASS | 8 | No action required |
@@ -80,6 +80,44 @@ All 152 service images are built with Go 1.21.13 (confirmed in `.github/workflow
 **Risk:** Attacker with a position in the network could present an invalid certificate that the service accepts, enabling MITM of encrypted channels.
 
 **Fix:** Bump `GO_VERSION` in `ci.yml` from `1.21` to `1.25` (or `1.24`). Rebuild all 152 images.
+
+---
+
+### C5 — Production database firewall had zero trusted-source rules ✅ RESOLVED (2026-09-03)
+
+**Discovery:** During staging isolation work on 2026-09-03, the production managed PostgreSQL cluster (`kinara-prod`, `c3ece802`) was found to have an empty trusted-sources list. DigitalOcean treats an empty list as **accept connections from any source on the internet**. TLS encryption and credential authentication were the only controls in place — there was no network-layer restriction.
+
+**Evidence:**
+```bash
+doctl databases firewalls list c3ece802-0929-4e9e-aa33-95906e9f4a4e
+UUID    ClusterUUID    Type    Value
+# (empty — zero rows)
+```
+
+Connectivity confirmed from the staging Kubernetes cluster (a separate account-internal resource that should have had no access):
+```
+psql "host=kinara-prod-do-user-43233394-0.l.db.ondigitalocean.com port=25060 ..."
+SELECT 1 → 1 row returned
+```
+
+**Risk:** Any host on the internet with valid credentials could connect directly to the production Postgres cluster, bypassing PgBouncer, connection pooling, and all application-layer controls. The 144 `kinara_*` databases — including patient, payment, and clinical records — were network-reachable from arbitrary sources.
+
+**Root cause:** The original scan (2026-08-30) checked transport encryption (`server_tls_sslmode`, mTLS to backends) but did not check DigitalOcean managed-database firewall state. An empty trusted-sources list is the DO default on cluster creation; it requires an explicit action to restrict, and no such action was taken at provisioning time.
+
+**Resolution (2026-09-03):**
+```bash
+doctl databases firewalls append c3ece802-0929-4e9e-aa33-95906e9f4a4e \
+  --rule "k8s:82f21e09-b4d1-4059-9a87-9a2ec9c07d57"
+```
+Trusted sources restricted to the production Kubernetes cluster (`82f21e09`, `production-kinara`) only. No developer machine IPs or staging cluster included.
+
+**Verification:**
+- Production health endpoint `GET https://api.kinaraos.com/health` → `{"status":"ok"}` — production healthy post-change.
+- `SELECT 1` via PgBouncer from a production pod → succeeded.
+- Zero pods in CrashLoopBackOff.
+- Staging connection attempt post-change → `timeout expired` — refused at network layer.
+
+**Standing check added:** Database firewall state must be verified on every new managed-database provisioning event and included in future security scans. `doctl databases firewalls list <id>` returning zero rows is a critical misconfiguration, not a clean state.
 
 ---
 
@@ -260,7 +298,8 @@ The ingress hostname `67.207.76.53.nip.io` relies on the nip.io public DNS-to-IP
 
 ```
 Week 1 (before any real patient data touches the system):
-  C1  Add HTTPS/TLS to ingress + real domain
+  C1  Add HTTPS/TLS to ingress + real domain              ✅ RESOLVED 2026-08-31
+  C5  Restrict production database firewall               ✅ RESOLVED 2026-09-03
   C2  Upgrade pgx to v5.9.0 across all services
   C3  Upgrade Go to 1.25 (CI_VERSION), rebuild all images
   C4  Audit parameterized queries; confirm no raw SQL concatenation

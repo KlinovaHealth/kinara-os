@@ -195,6 +195,49 @@ Run this checklist before declaring a restore successful:
 
 ---
 
+## Production Database Access
+
+Direct `psql` connections from developer machines are **intentionally not permitted**. The production database firewall restricts trusted sources to the production Kubernetes cluster (`82f21e09`) only. No developer machine IPs — including residential or VPN addresses — are in the trusted-sources list, and none should be added. Residential IPs rotate, widen the attack surface, and provide no auditability.
+
+### How to access the production database for admin or diagnostic queries
+
+All production database access goes through a pod in the `kinara-production` namespace:
+
+```bash
+# Exec into any running service pod
+kubectl --context do-fra1-production-kinara exec -it \
+  -n kinara-production \
+  <pod-name> -- sh
+
+# From inside the pod, connect via PgBouncer using kinara_app credentials
+# (doadmin is NOT in PgBouncer's userlist — use kinara_app)
+PGPASSWORD='KinaraApp2026!Secure#' psql \
+  "host=kinara-pgbouncer port=5432 user=kinara_app dbname=<db_name> sslmode=require"
+```
+
+Or run a one-shot ephemeral pod with psql:
+
+```bash
+kubectl --context do-fra1-production-kinara run psql-admin --rm -i --restart=Never \
+  -n kinara-production \
+  --image=postgres:15 \
+  --env="PGPASSWORD=KinaraApp2026!Secure#" \
+  -- psql "host=kinara-pgbouncer port=5432 user=kinara_app dbname=<db_name> sslmode=require" \
+  -c "<query>"
+```
+
+### Key constraints
+
+| Constraint | Detail |
+|---|---|
+| PgBouncer user | Only `kinara_app` is in `/etc/pgbouncer/userlist.txt`. `doadmin` is rejected with `no such user`. |
+| TLS required | `client_tls_sslmode = require` — connections without SSL are refused with `SSL required`. |
+| Pool mode | `transaction` — do not use `SET` session-level variables or prepared statements outside a transaction block. |
+| Direct-to-Postgres port | Port 25060 (the production host) is not reachable from outside the production k8s cluster. Always go through PgBouncer on port 5432 from inside the cluster. |
+| Admin IP policy | Adding a residential or office IP to the database firewall is deliberately avoided. If temporary direct access is required, use a pod, not an IP allowlist entry. |
+
+---
+
 ## Known Constraints and Gotchas
 
 | Issue | Detail |
