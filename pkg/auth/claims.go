@@ -3,10 +3,8 @@
 package auth
 
 import (
-	"context"
 	"crypto/rsa"
 	"errors"
-	"net/http"
 	"os"
 	"strings"
 
