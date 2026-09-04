@@ -15,6 +15,7 @@ import (
 	"github.com/klinova/kinara-os/documentation-service/auth"
 	"github.com/klinova/kinara-os/documentation-service/db"
 	"github.com/klinova/kinara-os/documentation-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/documentation-service/middleware"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -43,6 +44,7 @@ func main() {
 	r.Use(middleware.RateLimit(rdb, 200))
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(middleware.JWT(jwtValidator))
+	api.Use(pkgauth.RequireTenantScope("documentation-service", nil))
 	h.RegisterRoutes(api)
 
 	r.Handle("/metrics", promhttp.Handler())

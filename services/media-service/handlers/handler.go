@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/media-service/auth"
 	"github.com/klinova/kinara-os/media-service/crypto"
 	"github.com/klinova/kinara-os/media-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/media-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("media-service", nil))
 	api.HandleFunc("/medias", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/medias", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/medias/{id}", h.get).Methods(http.MethodGet)

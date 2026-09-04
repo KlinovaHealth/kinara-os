@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/water-management-service/auth"
 	"github.com/klinova/kinara-os/water-management-service/crypto"
 	"github.com/klinova/kinara-os/water-management-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/water-management-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("water-management-service", nil))
 	api.HandleFunc("/water-managements", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/water-managements", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/water-managements/{id}", h.get).Methods(http.MethodGet)

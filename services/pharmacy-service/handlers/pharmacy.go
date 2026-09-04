@@ -14,6 +14,7 @@ import (
 	"github.com/klinova/kinara-os/pharmacy-service/db"
 	"github.com/klinova/kinara-os/pharmacy-service/middleware"
 	"github.com/klinova/kinara-os/pharmacy-service/models"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 )
 
 type Handler struct {
@@ -29,6 +30,7 @@ func New(queries *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handl
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("pharmacy-service", nil))
 
 	// Prescriptions
 	api.HandleFunc("/prescriptions", h.registerPrescription).Methods(http.MethodPost)

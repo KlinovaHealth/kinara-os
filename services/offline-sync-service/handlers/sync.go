@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/klinova/kinara-os/offline-sync-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/offline-sync-service/middleware"
 )
 
@@ -55,6 +56,7 @@ func (h *Handler) Status(w http.ResponseWriter, r *http.Request) { h.status(w, r
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	sync := r.PathPrefix("/sync").Subrouter()
 	sync.Use(jwtMW)
+	sync.Use(pkgauth.RequireTenantScope("offline-sync-service", nil))
 	sync.Use(middleware.RequireClinicScope)
 
 	sync.HandleFunc("/pull", h.pull).Methods(http.MethodPost)

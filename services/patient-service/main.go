@@ -21,6 +21,7 @@ import (
 	"github.com/klinova/kinara-os/patient-service/auth"
 	"github.com/klinova/kinara-os/patient-service/db"
 	"github.com/klinova/kinara-os/patient-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/patient-service/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -93,6 +94,7 @@ func main() {
 	// All /api/v1 routes require a valid JWT.
 	protected := r.PathPrefix("/api/v1").Subrouter()
 	protected.Use(middleware.JWT(cfg.JWTPublicKeyPath))
+	protected.Use(pkgauth.RequireTenantScope("patient-service", nil))
 
 	queries := db.New(pool)
 	h := handlers.New(queries, cfg.EncryptionKey, logger)

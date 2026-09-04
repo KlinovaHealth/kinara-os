@@ -17,6 +17,7 @@ import (
 	"github.com/klinova/kinara-os/governance-service/db"
 	"github.com/klinova/kinara-os/governance-service/handlers"
 	"github.com/klinova/kinara-os/governance-service/middleware"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
@@ -112,7 +113,8 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	protected := r.PathPrefix("").Subrouter()
-	protected.Use(middleware.JWT(mustEnv("JWT_PUBLIC_KEY_PATH")))
+	protected.Use(middleware.JWT(mustEnv("JWT_PUBLIC_KEY_PATH"))
+	protected.Use(pkgauth.RequireTenantScope("governance-service", nil)))
 	protected.Use(middleware.RateLimit(rdb, 1000))
 
 	queries := db.New(pool)

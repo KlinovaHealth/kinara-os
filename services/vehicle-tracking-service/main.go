@@ -14,6 +14,7 @@ import (
 	"github.com/klinova/kinara-os/vehicle-tracking-service/auth"
 	"github.com/klinova/kinara-os/vehicle-tracking-service/db"
 	"github.com/klinova/kinara-os/vehicle-tracking-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/vehicle-tracking-service/middleware"
 )
 
@@ -41,6 +42,7 @@ func main() {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging(logger))
 	r.Use(middleware.JWT(validator))
+	r.Use(pkgauth.RequireTenantScope("vehicle-tracking-service", nil))
 	h.Register(r)
 
 	r.Handle("/metrics", promhttp.Handler())

@@ -14,6 +14,7 @@ import (
 	"github.com/klinova/kinara-os/appointment-service/auth"
 	"github.com/klinova/kinara-os/appointment-service/db"
 	"github.com/klinova/kinara-os/appointment-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/appointment-service/middleware"
 )
 
@@ -42,6 +43,7 @@ func main() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logging(logger))
 	r.Use(middleware.JWT(validator))
+	r.Use(pkgauth.RequireTenantScope("appointment-service", nil))
 	h.Register(r)
 
 	r.Handle("/metrics", promhttp.Handler())

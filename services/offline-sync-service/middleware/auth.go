@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/klinova/kinara-os/offline-sync-service/auth"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 )
 
 type contextKey string
@@ -31,6 +32,14 @@ func JWT(v *auth.Validator) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), claimsKey, claims)
+			ctx = pkgauth.InjectClaims(ctx, &pkgauth.Claims{
+				UserID:     claims.UserID,
+				Role:       claims.Role,
+				Scopes:     claims.Scopes,
+				EntityType: claims.EntityType,
+				TenantID:   claims.TenantID,
+				ClinicID:   claims.ClinicID,
+			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/klinova/kinara-os/market-service/auth"
 	"github.com/klinova/kinara-os/market-service/db"
 	"github.com/klinova/kinara-os/market-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/market-service/middleware"
 )
 
@@ -63,6 +64,7 @@ func main() {
 	api.Use(middleware.Logging(slog.Default()))
 	api.Use(middleware.RateLimit(rdb, 300))
 	api.Use(middleware.JWT(jwtValidator))
+	api.Use(pkgauth.RequireTenantScope("market-service", nil))
 	marketHandler.RegisterRoutes(api)
 
 	tlsCfg, err := auth.BuildServerTLSConfig(auth.MTLSConfig{

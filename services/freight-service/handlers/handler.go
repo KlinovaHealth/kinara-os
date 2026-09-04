@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/freight-service/auth"
 	"github.com/klinova/kinara-os/freight-service/crypto"
 	"github.com/klinova/kinara-os/freight-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/freight-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("freight-service", nil))
 	api.HandleFunc("/freights", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/freights", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/freights/{id}", h.get).Methods(http.MethodGet)

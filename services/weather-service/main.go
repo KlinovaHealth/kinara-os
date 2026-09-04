@@ -19,6 +19,7 @@ import (
 	"github.com/klinova/kinara-os/weather-service/auth"
 	"github.com/klinova/kinara-os/weather-service/db"
 	"github.com/klinova/kinara-os/weather-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/weather-service/middleware"
 )
 
@@ -63,6 +64,7 @@ func main() {
 	api.Use(middleware.Logging(slog.Default()))
 	api.Use(middleware.RateLimit(rdb, 500))
 	api.Use(middleware.JWT(jwtValidator))
+	api.Use(pkgauth.RequireTenantScope("weather-service", nil))
 	weatherHandler.RegisterRoutes(api)
 
 	tlsCfg, err := auth.BuildServerTLSConfig(auth.MTLSConfig{

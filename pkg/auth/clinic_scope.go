@@ -136,6 +136,13 @@ func RequireTenantScope(serviceName string, tenantClinics func(tenantID uuid.UUI
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Exempt health/readiness/metrics endpoints — they carry no auth context.
+			p := r.URL.Path
+			if p == "/health" || p == "/ready" || p == "/metrics" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			claims := ClaimsFromContext(r.Context())
 
 			wouldBlock := false

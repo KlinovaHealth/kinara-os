@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/soil-service/auth"
 	"github.com/klinova/kinara-os/soil-service/crypto"
 	"github.com/klinova/kinara-os/soil-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/soil-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("soil-service", nil))
 	api.HandleFunc("/soils", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/soils", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/soils/{id}", h.get).Methods(http.MethodGet)

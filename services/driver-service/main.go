@@ -22,6 +22,7 @@ import (
 	"github.com/klinova/kinara-os/driver-service/db"
 	"github.com/klinova/kinara-os/driver-service/handlers"
 	"github.com/klinova/kinara-os/driver-service/middleware"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 )
 
 func main() {
@@ -79,6 +80,7 @@ func main() {
 	api.Use(middleware.Logging(slog.Default()))
 	api.Use(middleware.RateLimit(rdb, 300))
 	api.Use(middleware.JWT(jwtValidator))
+	api.Use(pkgauth.RequireTenantScope("driver-service", nil))
 	driverHandler.RegisterRoutes(api)
 
 	tlsCfg, err := auth.BuildServerTLSConfig(auth.MTLSConfig{

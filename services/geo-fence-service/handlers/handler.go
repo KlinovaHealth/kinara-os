@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/geo-fence-service/auth"
 	"github.com/klinova/kinara-os/geo-fence-service/crypto"
 	"github.com/klinova/kinara-os/geo-fence-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/geo-fence-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("geo-fence-service", nil))
 	api.HandleFunc("/geo-fences", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/geo-fences", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/geo-fences/{id}", h.get).Methods(http.MethodGet)

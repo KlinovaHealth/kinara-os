@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/klinova/kinara-os/patient-service/auth"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/patient-service/models"
 )
 
@@ -48,6 +49,13 @@ func JWT(publicKeyPath string) func(http.Handler) http.Handler {
 			}
 
 			ctx := context.WithValue(r.Context(), ContextKeyClaims, claims)
+			ctx = pkgauth.InjectClaims(ctx, &pkgauth.Claims{
+				UserID:     claims.UserID,
+				Role:       claims.Role,
+				Scopes:     claims.Scopes,
+				EntityType: claims.EntityType,
+				TenantID:   claims.TenantID,
+			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

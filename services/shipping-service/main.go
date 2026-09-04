@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/shipping-service/auth"
 	"github.com/klinova/kinara-os/shipping-service/db"
 	"github.com/klinova/kinara-os/shipping-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/shipping-service/middleware"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -42,6 +43,7 @@ func main() {
 	r.Use(middleware.Logging(slog.Default()))
 	r.Use(middleware.RateLimit(rdb, 300))
 	r.Use(middleware.JWT(jwtValidator))
+	r.Use(pkgauth.RequireTenantScope("shipping-service", nil))
 
 	api := r.PathPrefix("/api/v1").Subrouter()
 	h.RegisterRoutes(api)

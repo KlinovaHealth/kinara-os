@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/agri-equipment-service/auth"
 	"github.com/klinova/kinara-os/agri-equipment-service/crypto"
 	"github.com/klinova/kinara-os/agri-equipment-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/agri-equipment-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("agri-equipment-service", nil))
 	api.HandleFunc("/agri-equipments", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/agri-equipments", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/agri-equipments/{id}", h.get).Methods(http.MethodGet)

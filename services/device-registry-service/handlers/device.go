@@ -14,6 +14,7 @@ import (
 	"github.com/klinova/kinara-os/device-registry-service/auth"
 	"github.com/klinova/kinara-os/device-registry-service/db"
 	"github.com/klinova/kinara-os/device-registry-service/middleware"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -36,6 +37,7 @@ func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler)
 	// Device enrollment — admin only
 	admin := r.PathPrefix("/devices").Subrouter()
 	admin.Use(jwtMW)
+	admin.Use(pkgauth.RequireTenantScope("device-registry-service", nil))
 	admin.HandleFunc("", h.listDevices).Methods(http.MethodGet)
 	admin.HandleFunc("/enroll", h.enrollDevice).Methods(http.MethodPost)
 	admin.HandleFunc("/{id}", h.getDevice).Methods(http.MethodGet)

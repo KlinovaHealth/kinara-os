@@ -14,6 +14,7 @@ import (
 	"github.com/klinova/kinara-os/vessel-service/auth"
 	"github.com/klinova/kinara-os/vessel-service/db"
 	"github.com/klinova/kinara-os/vessel-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/vessel-service/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
@@ -86,6 +87,7 @@ func main() {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(middleware.Logging(logger))
 	api.Use(middleware.JWT(validator))
+	api.Use(pkgauth.RequireTenantScope("vessel-service", nil))
 	api.Use(middleware.RateLimit(rdb, 120))
 	h.RegisterRoutes(api)
 

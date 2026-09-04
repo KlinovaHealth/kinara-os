@@ -17,6 +17,7 @@ import (
 	"github.com/klinova/kinara-os/clinical-service/db"
 	"github.com/klinova/kinara-os/clinical-service/handlers"
 	"github.com/klinova/kinara-os/clinical-service/middleware"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
@@ -103,7 +104,8 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	protected := r.PathPrefix("").Subrouter()
-	protected.Use(middleware.JWT(mustEnv("JWT_PUBLIC_KEY_PATH")))
+	protected.Use(middleware.JWT(mustEnv("JWT_PUBLIC_KEY_PATH"))
+	protected.Use(pkgauth.RequireTenantScope("clinical-service", nil)))
 	protected.Use(middleware.RateLimit(rdb, 1000))
 
 	queries := db.New(pool)

@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/agri-forecast-service/auth"
 	"github.com/klinova/kinara-os/agri-forecast-service/crypto"
 	"github.com/klinova/kinara-os/agri-forecast-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/agri-forecast-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("agri-forecast-service", nil))
 	api.HandleFunc("/agri-forecasts", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/agri-forecasts", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/agri-forecasts/{id}", h.get).Methods(http.MethodGet)

@@ -14,6 +14,7 @@ import (
 	"github.com/klinova/kinara-os/crew-service/auth"
 	"github.com/klinova/kinara-os/crew-service/db"
 	"github.com/klinova/kinara-os/crew-service/handlers"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/crew-service/middleware"
 )
 
@@ -35,6 +36,7 @@ func main() {
 	h := handlers.New(db.New(pool))
 	r := mux.NewRouter()
 	r.Use(middleware.JWT(jwtValidator))
+	r.Use(pkgauth.RequireTenantScope("crew-service", nil))
 	r.Use(middleware.Logging(logger))
 	h.Register(r)
 	r.Handle("/metrics", promhttp.Handler())

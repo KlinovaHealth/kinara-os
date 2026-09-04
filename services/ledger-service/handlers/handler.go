@@ -12,6 +12,7 @@ import (
 	"github.com/klinova/kinara-os/ledger-service/auth"
 	"github.com/klinova/kinara-os/ledger-service/crypto"
 	"github.com/klinova/kinara-os/ledger-service/db"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/ledger-service/middleware"
 )
 
@@ -28,6 +29,7 @@ func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(jwtMW)
+	api.Use(pkgauth.RequireTenantScope("ledger-service", nil))
 	api.HandleFunc("/ledgers", h.list).Methods(http.MethodGet)
 	api.HandleFunc("/ledgers", h.create).Methods(http.MethodPost)
 	api.HandleFunc("/ledgers/{id}", h.get).Methods(http.MethodGet)

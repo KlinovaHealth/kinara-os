@@ -1,6 +1,6 @@
 # Staging environment overrides
 # Registry: registry.digitalocean.com/kinara-registry (same as production)
-# Database: DigitalOcean Managed PostgreSQL cluster (kinara-prod, fra1)
+# Database: DigitalOcean Managed PostgreSQL cluster (kinara-staging-db, fra1)
 # Cluster:  staging-kinara (DO Kubernetes, fra1)
 
 global:
@@ -33,10 +33,10 @@ redis:
   maxmemory: 256mb
   replicas: 1
 
-# DigitalOcean Managed PostgreSQL — staging uses the kinara-prod cluster
-# with kinara_app role (DML) created in Phase 2
+# DigitalOcean Managed PostgreSQL — staging uses the kinara-staging-db cluster
+# with kinara_app role (DML) created in Phase 3
 database:
-  host: kinara-prod-do-user-43233394-0.l.db.ondigitalocean.com
+  host: kinara-staging-db-do-user-43233394-0.d.db.ondigitalocean.com
   port: "25060"
   user: kinara_app
   sslMode: require
