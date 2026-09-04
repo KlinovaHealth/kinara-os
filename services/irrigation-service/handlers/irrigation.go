@@ -76,7 +76,7 @@ func (h *Handler) registerSystem(w http.ResponseWriter, r *http.Request) {
 		SystemType:     req.SystemType,
 		CapacityLiters: req.CapacityLiters,
 		SensorID:       req.SensorID,
-		TenantID:       claims.TenantID,
+		TenantID:       claims.TenantID.String(),
 		CreatedAt:      time.Now().UTC(),
 	}
 	if err := h.store.RegisterSystem(r.Context(), sys); err != nil {
@@ -133,7 +133,7 @@ func (h *Handler) createSchedule(w http.ResponseWriter, r *http.Request) {
 		CronExpression: req.CronExpression,
 		DurationMin:    req.DurationMin,
 		CropType:       req.CropType,
-		TenantID:       claims.TenantID,
+		TenantID:       claims.TenantID.String(),
 		CreatedAt:      time.Now().UTC(),
 	}
 	if err := h.store.CreateSchedule(r.Context(), sched); err != nil {

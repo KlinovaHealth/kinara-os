@@ -82,7 +82,7 @@ func (h *Handler) registerAnimal(w http.ResponseWriter, r *http.Request) {
 		AgeMonths:    req.AgeMonths,
 		Sex:          req.Sex,
 		EarTag:       req.EarTag,
-		TenantID:     claims.TenantID,
+		TenantID:     claims.TenantID.String(),
 		RegisteredAt: time.Now().UTC(),
 	}
 	if err := h.store.RegisterAnimal(r.Context(), animal); err != nil {

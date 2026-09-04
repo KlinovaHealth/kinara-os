@@ -80,7 +80,7 @@ func (h *Handler) reportCase(w http.ResponseWriter, r *http.Request) {
 		Location:    req.Location,
 		Symptoms:    req.Symptoms,
 		ReportedBy:  claims.UserID,
-		TenantID:    claims.TenantID,
+		TenantID:    claims.TenantID.String(),
 		ReportedAt:  now,
 	}
 

@@ -91,7 +91,7 @@ func (h *Handler) record(w http.ResponseWriter, r *http.Request) {
 		ClinicID:        req.ClinicID,
 		NextDoseDate:    req.NextDoseDate,
 		Status:          models.DoseAdministered,
-		TenantID:        claims.TenantID,
+		TenantID:        claims.TenantID.String(),
 		CreatedAt:       time.Now().UTC(),
 	}
 

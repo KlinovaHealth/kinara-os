@@ -104,8 +104,8 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	protected := r.PathPrefix("").Subrouter()
-	protected.Use(middleware.JWT(mustEnv("JWT_PUBLIC_KEY_PATH"))
-	protected.Use(pkgauth.RequireTenantScope("clinical-service", nil)))
+	protected.Use(middleware.JWT(mustEnv("JWT_PUBLIC_KEY_PATH")))
+	protected.Use(pkgauth.RequireTenantScope("clinical-service", nil))
 	protected.Use(middleware.RateLimit(rdb, 1000))
 
 	queries := db.New(pool)

@@ -126,7 +126,7 @@ func (h *Handler) submitForm(w http.ResponseWriter, r *http.Request) {
 		FormVersion:   form.Version,
 		Data:          req.Data,
 		SubmittedBy:   claims.UserID,
-		TenantID:      claims.TenantID,
+		TenantID:      claims.TenantID.String(),
 		SubmittedAt:   now,
 		UpdatedAt:     now,
 	}

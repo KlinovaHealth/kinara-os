@@ -204,7 +204,7 @@ func (h *Handler) fleetStatus(w http.ResponseWriter, r *http.Request) {
 		respond(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
 		return
 	}
-	items, err := h.store.GetFleetStatus(r.Context(), claims.TenantID)
+	items, err := h.store.GetFleetStatus(r.Context(), claims.TenantID.String())
 	if err != nil {
 		respond(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
 		return

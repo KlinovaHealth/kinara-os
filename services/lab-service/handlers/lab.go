@@ -102,7 +102,7 @@ func (h *Handler) createOrder(w http.ResponseWriter, r *http.Request) {
 		Priority:  req.Priority,
 		Status:    models.OrderPending,
 		Notes:     req.Notes,
-		TenantID:  claims.TenantID,
+		TenantID:  claims.TenantID.String(),
 		OrderedAt: time.Now().UTC(),
 	}
 

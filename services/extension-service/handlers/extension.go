@@ -131,7 +131,7 @@ func (h *Handler) bookConsultation(w http.ResponseWriter, r *http.Request) {
 		CropType:      req.CropType,
 		PreferredDate: req.PreferredDate,
 		Status:        "pending",
-		TenantID:      claims.TenantID,
+		TenantID:      claims.TenantID.String(),
 		BookedAt:      now,
 	}
 	if err := h.store.BookConsultation(r.Context(), c); err != nil {

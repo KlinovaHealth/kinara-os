@@ -109,7 +109,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Type:           req.Type,
 		Status:         models.StatusScheduled,
 		Notes:          req.Notes,
-		TenantID:       claims.TenantID,
+		TenantID:       claims.TenantID.String(),
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
@@ -205,7 +205,7 @@ func (h *Handler) listByClinic(w http.ResponseWriter, r *http.Request) {
 		status = &v
 	}
 
-	items, err := h.store.ListByClinic(r.Context(), clinicID, claims.TenantID, date, status, 100)
+	items, err := h.store.ListByClinic(r.Context(), clinicID, claims.TenantID.String(), date, status, 100)
 	if err != nil {
 		respond(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
 		return
@@ -229,7 +229,7 @@ func (h *Handler) listByPatient(w http.ResponseWriter, r *http.Request) {
 		respond(w, http.StatusBadRequest, map[string]string{"error": "invalid patient_id"})
 		return
 	}
-	items, err := h.store.ListByPatient(r.Context(), patientID, claims.TenantID, 100)
+	items, err := h.store.ListByPatient(r.Context(), patientID, claims.TenantID.String(), 100)
 	if err != nil {
 		respond(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
 		return

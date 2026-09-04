@@ -62,7 +62,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		EstArrivalAt:    req.EstArrivalAt,
 		DistanceNM:      req.DistanceNM,
 		FuelTons:        req.FuelTons,
-		TenantID:        claims.TenantID,
+		TenantID:        claims.TenantID.String(),
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}

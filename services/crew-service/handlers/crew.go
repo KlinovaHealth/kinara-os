@@ -58,7 +58,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		Rank:           req.Rank,
 		VesselID:       req.VesselID,
 		IsActive:       true,
-		TenantID:       claims.TenantID,
+		TenantID:       claims.TenantID.String(),
 		JoinedAt:       now,
 		UpdatedAt:      now,
 	}
