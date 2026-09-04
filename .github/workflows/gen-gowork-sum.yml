@@ -5,7 +5,7 @@ on:
 
 jobs:
   sync:
-    name: go work sync and commit
+    name: go mod tidy + go work sync and commit
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -18,6 +18,12 @@ jobs:
         with:
           go-version: "1.25"
           cache: false
+      - name: Tidy pkg/auth (generates go.sum for prometheus dependency)
+        run: |
+          cd pkg/auth
+          go mod tidy
+          echo "pkg/auth/go.sum line count: $(wc -l < go.sum)"
+          head -3 go.sum
       - name: Run go work sync
         run: go work sync
       - name: Confirm go.work.sum generated
@@ -28,16 +34,16 @@ jobs:
           fi
           echo "go.work.sum generated — line count: $(wc -l < go.work.sum)"
           head -5 go.work.sum
-      - name: Commit and push go.work.sum
+      - name: Commit and push sum files
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add go.work.sum
+          git add pkg/auth/go.sum go.work.sum
           git diff --cached --quiet && echo "No changes to commit" && exit 0
-          git commit -m "fix: add go.work.sum for workspace dependency resolution
+          git commit -m "fix: add go.sum files for workspace dependency resolution
 
-Resolves unit-test CI failures caused by missing checksums for
-prometheus/client_golang added to pkg/auth in f74bcb5.
+Generates pkg/auth/go.sum (prometheus/client_golang added in f74bcb5
+without checksums) and go.work.sum for the full workspace.
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
           git push origin main

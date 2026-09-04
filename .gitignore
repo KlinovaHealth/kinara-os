@@ -35,6 +35,6 @@ certs/
 .DS_Store
 Thumbs.db
 
-# Go workspace
-go.work
-go.work.sum
+# Go workspace (tracked — CI needs go.work and go.work.sum)
+# go.work
+# go.work.sum
