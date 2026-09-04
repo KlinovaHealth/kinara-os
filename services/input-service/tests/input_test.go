@@ -261,7 +261,7 @@ func TestGetSubmission_Success(t *testing.T) {
 		FormVersion:   1,
 		Data:          json.RawMessage(`{"full_name":"Koffi Adu"}`),
 		SubmittedBy:   uuid.New(),
-		TenantID: uuid.Nil,
+		TenantID: uuid.Nil.String(),
 		SubmittedAt:   now,
 		UpdatedAt:     now,
 	}
@@ -307,7 +307,7 @@ func TestListByPatient_Success(t *testing.T) {
 			FormVersion: 1,
 			Data:        json.RawMessage(`{}`),
 			SubmittedBy: uuid.New(),
-			TenantID: uuid.Nil,
+			TenantID: uuid.Nil.String(),
 			SubmittedAt: now.Add(time.Duration(i) * time.Minute),
 			UpdatedAt:   now,
 		}
@@ -340,7 +340,7 @@ func TestUpdateSubmission_Success(t *testing.T) {
 		FormVersion: 1,
 		Data:        json.RawMessage(`{"full_name":"Old Name"}`),
 		SubmittedBy: uuid.New(),
-		TenantID: uuid.Nil,
+		TenantID: uuid.Nil.String(),
 		SubmittedAt: now,
 		UpdatedAt:   now,
 	}

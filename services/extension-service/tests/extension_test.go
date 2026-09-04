@@ -174,7 +174,7 @@ func seedConsultation(store *mockStore, farmerID uuid.UUID) uuid.UUID {
 		Topic:      "Pest control",
 		CropType:   "maize",
 		Status:     "pending",
-		TenantID: uuid.Nil,
+		TenantID: uuid.Nil.String(),
 		BookedAt:   time.Now().UTC(),
 	}
 	return id

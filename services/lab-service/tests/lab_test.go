@@ -115,7 +115,7 @@ func sampleOrder(id uuid.UUID) *models.LabOrder {
 		TestName:  "Hemoglobin",
 		Priority:  "routine",
 		Status:    models.OrderPending,
-		TenantID: uuid.Nil,
+		TenantID: uuid.Nil.String(),
 		OrderedAt: time.Now().UTC(),
 	}
 }

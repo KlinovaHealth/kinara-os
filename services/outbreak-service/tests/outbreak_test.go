@@ -61,7 +61,7 @@ func (m *mockStore) UpsertOutbreak(_ context.Context, diseaseCode, clinicID, dis
 		ClinicID:    clinicID,
 		CaseCount:   caseCount,
 		Status:      "active",
-		TenantID: uuid.Nil,
+		TenantID: uuid.Nil.String(),
 		DetectedAt:  time.Now().UTC(),
 	}
 	m.mu.Lock()

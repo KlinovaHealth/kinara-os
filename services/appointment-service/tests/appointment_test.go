@@ -202,7 +202,7 @@ func seedAppointment(store *mockStore, patientID uuid.UUID, clinicID string) uui
 		DurationMin:    30,
 		Type:           models.TypeConsultation,
 		Status:         models.StatusScheduled,
-		TenantID: uuid.Nil,
+		TenantID: uuid.Nil.String(),
 		CreatedAt:      time.Now().UTC(),
 		UpdatedAt:      time.Now().UTC(),
 	}
