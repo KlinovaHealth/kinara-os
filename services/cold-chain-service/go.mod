@@ -3,6 +3,7 @@ module github.com/klinova/kinara-os/cold-chain-service
 go 1.21
 
 require (
+	github.com/klinova/kinara-os/pkg/auth v0.0.0-00010101000000-000000000000
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/mux v1.8.1
