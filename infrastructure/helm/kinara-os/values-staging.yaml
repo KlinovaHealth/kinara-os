@@ -5,7 +5,7 @@
 
 global:
   imageRegistry: registry.digitalocean.com/kinara-registry
-  imageTag: latest
+  imageTag: 45358e95827f415c6281f19756b73e60c173fe9f
   imagePullPolicy: Always
   namespace: staging
   jwtPublicKeyPath: /etc/jwt/public.pem
