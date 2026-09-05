@@ -41,12 +41,12 @@ jobs:
           git add pkg/auth/go.sum go.work.sum
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "$(cat <<'EOF'
-fix: add go.sum files for workspace dependency resolution
+          fix: add go.sum files for workspace dependency resolution
 
-Generates pkg/auth/go.sum (prometheus/client_golang added in f74bcb5
-without checksums) and go.work.sum for the full workspace.
+          Generates pkg/auth/go.sum (prometheus/client_golang added in f74bcb5
+          without checksums) and go.work.sum for the full workspace.
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-EOF
-)"
+          Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+          EOF
+          )"
           git push origin main
