@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Disease Surveillance & Early Warning · Kinara OS",
-  description: "Cross-domain outbreak detection. Kinara OS surfaces epidemic signals weeks before single-domain surveillance by correlating health, logistics, agriculture and maritime data under governance.",
+  description: "Cross-domain outbreak detection. Kinara OS is designed to surface epidemic signals earlier than single-domain surveillance by correlating governed signals across health, logistics, agriculture and maritime systems.",
 };
 
 const SIGNAL_CHAIN = [
@@ -17,13 +17,13 @@ const SIGNAL_CHAIN = [
 
 const WHY_IT_MATTERS = [
   { heading: "Traditional surveillance is single-domain.", body: "Health information systems track clinic visits and lab results. They cannot see the food security shock that preceded the cluster by two weeks, or the movement pattern that explains its geography. The signals exist. The connection does not." },
-  { heading: "The data collection is already done.", body: "Kinara OS does not require a new surveillance programme. The maritime, agriculture, logistics and health records that produce the early warning already flow through the system every day as part of normal operations. The outbreak signal is a query, not a new data source." },
+  { heading: "The data collection is already done.", body: "Kinara OS does not require a new surveillance programme. The maritime, agriculture, logistics and health records that flow through the system every day as part of normal operations are the same records the early warning query runs against. The outbreak signal is a query, not a new data source." },
   { heading: "Every join is governed and attributed.", body: "Correlating health data with logistics or agriculture data is a cross-domain query. Kinara Core checks the lawful basis, executes with minimum disclosure, and writes the audit entry before the result is returned. The health steward can see exactly what was asked and what was disclosed." },
-  { heading: "Weeks, not days.", body: "The maritime-to-health signal chain in documented outbreak patterns spans 14 to 28 days. A system that sees the Day 0 maritime signal and correlates it with Day 14 agriculture data issues a warning on Day 21. Single-domain surveillance issues the same warning on Day 28 to 35, when the cluster is already visible in clinic queues." },
+  { heading: "The hypothesis: earlier warning.", body: "In documented outbreak patterns, the maritime-to-health signal chain spans 14 to 28 days. If cross-domain correlation can surface a warning at Day 21 instead of Day 28 to 35, that is 7 to 14 days earlier for the health steward to act. The March 2027 pilot is designed to test whether this holds in a real-world setting." },
 ];
 
 const USE_CASES = [
-  { label: "Epidemic preparedness", color: "#10B981", desc: "Correlate health cluster data with logistics movement and maritime arrivals to detect outbreaks 7 to 14 days earlier than clinic-only surveillance." },
+  { label: "Epidemic preparedness", color: "#10B981", desc: "Correlate health cluster data with logistics movement and maritime arrivals to evaluate whether cross-domain signals can provide earlier warning than clinic-only surveillance." },
   { label: "Food security and disease correlation", color: "#F59E0B", desc: "Match agriculture yield shocks to downstream health outcomes. Identify at-risk populations before malnutrition presents clinically." },
   { label: "Vector and transmission mapping", color: "#3B82F6", desc: "Use logistics movement data to model disease transmission routes. Identify which transport corridors correlate with spread patterns." },
   { label: "Port health screening", color: "#0EA5E9", desc: "Cross-reference maritime crew manifests and port-of-origin data with active outbreak locations to inform port health decisions." },
@@ -55,7 +55,7 @@ export default function EarlyWarningPage() {
             </h1>
             <div className="grid md:grid-cols-2 gap-10 mb-16 max-w-5xl">
               <p className="text-[18px] md:text-[20px] text-[#8A98A8] leading-relaxed">
-                Kinara OS surfaces epidemic signals weeks before single-domain surveillance by correlating health, logistics, agriculture, and maritime data under governance. No new data collection. No shared databases. Every join authorised and logged.
+                Kinara OS is designed to surface epidemic signals earlier than single-domain surveillance by correlating governed signals across health, logistics, agriculture, and maritime systems. No new data collection. No shared databases. Every join authorised and logged.
               </p>
               <div className="flex flex-col gap-4 items-start self-end pb-1">
                 <Link href="/contact" className="inline-block bg-[#E0561C] text-white text-[14px] font-[700] px-7 py-3.5 hover:bg-[#c94d19] transition-colors">
@@ -71,7 +71,7 @@ export default function EarlyWarningPage() {
         </section>
 
         {/* ── Why it matters ────────────────────────────────────── */}
-        <section className="bg-white px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-white px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-start">
               <div>
@@ -83,12 +83,12 @@ export default function EarlyWarningPage() {
                   Every documented epidemic has a precursor signal that appears in data other than the health system: in food prices, in transport patterns, in port arrivals. That data exists. It is collected daily. It sits in separate systems with separate stewards.
                 </p>
                 <p className="text-[17px] text-[#5D6E82] leading-relaxed">
-                  Traditional surveillance waits for the health system to see enough cases to raise a flag. By then, the outbreak is already in the community. Kinara OS sees the correlated signal across all four domains before the health system has a cluster to report.
+                  Traditional surveillance waits for the health system to see enough cases to raise a flag. By then, the outbreak is already in the community. Kinara OS is designed to correlate the signal across all four domains before the health system has a cluster to report.
                 </p>
               </div>
-              <div className="space-y-0 border border-[#C3CEDA]">
+              <div className="space-y-0">
                 {WHY_IT_MATTERS.map((item, i) => (
-                  <div key={i} className="bg-white px-7 py-6 border-b border-[#C3CEDA] last:border-0">
+                  <div key={i} className="bg-[#F5F8FB] px-7 py-6 mb-2 last:mb-0">
                     <p className="text-[16px] font-[700] text-[#0F1B2D] mb-2">{item.heading}</p>
                     <p className="text-[14px] text-[#5D6E82] leading-relaxed">{item.body}</p>
                   </div>
@@ -99,7 +99,7 @@ export default function EarlyWarningPage() {
         </section>
 
         {/* ── Signal chain ──────────────────────────────────────── */}
-        <section className="bg-[#F5F8FB] px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-[#F5F8FB] px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="mb-14">
               <p className="text-[11px] font-[700] uppercase tracking-[0.18em] text-[#E0561C] mb-4">How it works</p>
@@ -107,19 +107,19 @@ export default function EarlyWarningPage() {
                 Follow one outbreak signal across four domains.
               </h2>
             </div>
-            <div className="space-y-0 border border-[#C3CEDA]">
+            <div className="space-y-2">
               {SIGNAL_CHAIN.map((row, i) => (
                 <div
                   key={i}
-                  className="grid md:grid-cols-2 border-b border-[#C3CEDA] last:border-0"
+                  className="grid md:grid-cols-2"
                   style={{ borderLeftWidth: "3px", borderLeftStyle: "solid", borderLeftColor: row.color, background: i === 4 ? "rgba(224,86,28,0.03)" : "white" }}
                 >
-                  <div className="px-8 py-6 md:border-r border-[#C3CEDA]">
+                  <div className="px-8 py-6">
                     <p className="text-[11px] font-[700] uppercase tracking-[0.15em] mb-1" style={{ color: row.color }}>{row.domain}</p>
                     <p className="text-[12px] text-[#8A98A8] mb-3">{row.day} from first signal</p>
                     <p className={`text-[16px] font-[700] leading-snug ${i === 4 ? "text-[#E0561C]" : "text-[#0F1B2D]"}`}>{row.signal}</p>
                   </div>
-                  <div className="px-8 py-6">
+                  <div className="px-8 py-6 bg-[#F5F8FB]">
                     <p className="text-[14px] text-[#5D6E82] leading-relaxed">{row.detail}</p>
                   </div>
                 </div>
@@ -129,7 +129,7 @@ export default function EarlyWarningPage() {
         </section>
 
         {/* ── Use cases ─────────────────────────────────────────── */}
-        <section className="bg-white px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-white px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="mb-14">
               <p className="text-[11px] font-[700] uppercase tracking-[0.18em] text-[#E0561C] mb-4">Applications</p>
@@ -137,9 +137,9 @@ export default function EarlyWarningPage() {
                 What this enables across domains.
               </h2>
             </div>
-            <div className="grid md:grid-cols-3 gap-px bg-[#C3CEDA]">
+            <div className="grid md:grid-cols-3 gap-6">
               {USE_CASES.map((uc) => (
-                <div key={uc.label} className="bg-white p-8">
+                <div key={uc.label} className="bg-[#F5F8FB] p-8">
                   <div className="w-8 h-1 mb-5 rounded-full" style={{ background: uc.color }} />
                   <p className="text-[17px] font-[800] text-[#0F1B2D] mb-3 tracking-[-0.02em]">{uc.label}</p>
                   <p className="text-[14px] text-[#5D6E82] leading-relaxed">{uc.desc}</p>
@@ -150,7 +150,7 @@ export default function EarlyWarningPage() {
         </section>
 
         {/* ── Governance note ───────────────────────────────────── */}
-        <section className="bg-[#F5F8FB] px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-[#F5F8FB] px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div>
@@ -203,7 +203,7 @@ export default function EarlyWarningPage() {
                   We will run the cross-domain query live.
                 </h2>
                 <p className="text-[17px] text-[#5D6E82] leading-relaxed">
-                  A 45-minute briefing. We walk through the signal chain, show the governance layer authorising the join, and display the audit log in real time. Nothing staged.
+                  The infrastructure is deployed and available for demonstration using synthetic data. A briefing is 45 minutes: we walk through the signal chain, show the governance layer authorising the join, and display the audit log in real time.
                 </p>
               </div>
               <div className="flex flex-col gap-4 items-start">

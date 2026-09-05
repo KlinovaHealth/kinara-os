@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Surveillance des maladies et alerte précoce · Kinara OS",
-  description: "Détection interdomaine des épidémies. Kinara OS détecte les signaux épidémiques des semaines avant la surveillance classique en corrélant les données de santé, logistique, agriculture et maritime.",
+  description: "Détection interdomaine des épidémies. Kinara OS est conçu pour détecter les signaux épidémiques plus tôt que la surveillance classique en corrélant des signaux gouvernés à travers les domaines santé, logistique, agriculture et maritime.",
 };
 
 const SIGNAL_CHAIN = [
@@ -17,13 +17,13 @@ const SIGNAL_CHAIN = [
 
 const WHY_IT_MATTERS = [
   { heading: "La surveillance traditionnelle est monodomaine.", body: "Les systèmes d'information sanitaire suivent les visites en clinique et les résultats de laboratoire. Ils ne peuvent pas voir le choc de sécurité alimentaire qui a précédé le cluster de deux semaines. Les signaux existent. La connexion n'existe pas." },
-  { heading: "La collecte de données est déjà faite.", body: "Kinara OS ne nécessite pas de nouveau programme de surveillance. Les enregistrements maritimes, agricoles, logistiques et sanitaires qui produisent l'alerte précoce transitent déjà par le système chaque jour. Le signal d'épidémie est une requête, pas une nouvelle source de données." },
+  { heading: "La collecte de données est déjà faite.", body: "Kinara OS ne nécessite pas de nouveau programme de surveillance. Les enregistrements maritimes, agricoles, logistiques et sanitaires qui transitent par le système chaque jour dans le cadre des opérations normales sont les mêmes que ceux sur lesquels s'exécute la requête d'alerte précoce. Le signal d'épidémie est une requête, pas une nouvelle source de données." },
   { heading: "Chaque jointure est gouvernée et attribuée.", body: "Corréler des données de santé avec des données logistiques ou agricoles est une requête interdomaine. Kinara Core vérifie la base légale, exécute avec un minimum de divulgation et consigne l'entrée d'audit avant que le résultat soit retourné." },
-  { heading: "Des semaines, pas des jours.", body: "La chaîne de signaux maritime-à-santé dans les schémas d'épidémies documentés couvre 14 à 28 jours. Un système qui voit le signal maritime au Jour 0 et le corrèle avec les données agricoles du Jour 14 émet un avertissement au Jour 21. La surveillance monodomaine émet le même avertissement aux Jours 28 à 35." },
+  { heading: "L'hypothèse: une alerte plus précoce.", body: "Dans les schémas d'épidémies documentés, la chaîne de signaux maritime-à-santé couvre 14 à 28 jours. Si la corrélation interdomaine peut produire une alerte au Jour 21 plutôt qu'aux Jours 28 à 35, cela donne au dépositaire santé 7 à 14 jours supplémentaires pour agir. Le pilote de mars 2027 est conçu pour tester si cela se confirme en conditions réelles." },
 ];
 
 const USE_CASES = [
-  { label: "Préparation aux épidémies", color: "#10B981", desc: "Corrélez les données de clusters en clinique avec les mouvements logistiques et les arrivées maritimes pour détecter les épidémies 7 à 14 jours plus tôt que la surveillance basée uniquement sur les cliniques." },
+  { label: "Préparation aux épidémies", color: "#10B981", desc: "Corrélez les données de clusters en clinique avec les mouvements logistiques et les arrivées maritimes pour évaluer si les signaux interdomaines peuvent fournir une alerte plus précoce que la surveillance basée uniquement sur les cliniques." },
   { label: "Sécurité alimentaire et corrélation maladies", color: "#F59E0B", desc: "Associez les chocs de rendement agricole aux résultats de santé en aval. Identifiez les populations à risque avant que la malnutrition ne se présente cliniquement." },
   { label: "Cartographie des vecteurs et de la transmission", color: "#3B82F6", desc: "Utilisez les données de mouvement logistique pour modéliser les voies de transmission des maladies. Identifiez les corridors de transport qui corrèlent avec les schémas de propagation." },
   { label: "Contrôle sanitaire portuaire", color: "#0EA5E9", desc: "Croisez les manifestes d'équipage maritime et les données de port d'origine avec les zones d'épidémies actives pour éclairer les décisions sanitaires portuaires." },
@@ -52,7 +52,7 @@ export default function FrEarlyWarningPage() {
             </h1>
             <div className="grid md:grid-cols-2 gap-10 mb-16 max-w-5xl">
               <p className="text-[18px] md:text-[20px] text-[#8A98A8] leading-relaxed">
-                Kinara OS détecte les signaux épidémiques des semaines avant la surveillance monodomaine en corrélant les données de santé, logistique, agriculture et maritime sous gouvernance. Aucune nouvelle collecte de données. Aucune base de données partagée. Chaque jointure autorisée et consignée.
+                Kinara OS est conçu pour détecter les signaux épidémiques plus tôt que la surveillance monodomaine en corrélant des signaux gouvernés à travers les domaines santé, logistique, agriculture et maritime. Aucune nouvelle collecte de données. Aucune base de données partagée. Chaque jointure autorisée et consignée.
               </p>
               <div className="flex flex-col gap-4 items-start self-end pb-1">
                 <Link href="/fr/contact" className="inline-block bg-[#E0561C] text-white text-[14px] font-[700] px-7 py-3.5 hover:bg-[#c94d19] transition-colors">
@@ -68,7 +68,7 @@ export default function FrEarlyWarningPage() {
         </section>
 
         {/* ── Pourquoi ──────────────────────────────────────────── */}
-        <section className="bg-white px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-white px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-start">
               <div>
@@ -80,12 +80,12 @@ export default function FrEarlyWarningPage() {
                   Chaque épidémie documentée possède un signal précurseur qui apparaît dans des données autres que le système de santé: dans les prix alimentaires, les schémas de transport, les arrivées portuaires. Ces données existent. Elles sont collectées quotidiennement. Elles résident dans des systèmes séparés avec des dépositaires séparés.
                 </p>
                 <p className="text-[17px] text-[#5D6E82] leading-relaxed">
-                  La surveillance traditionnelle attend que le système de santé voie suffisamment de cas pour déclencher une alerte. Entre-temps, l'épidémie est déjà dans la communauté. Kinara OS voit le signal corrélé sur les quatre domaines avant que le système de santé ait un cluster à signaler.
+                  La surveillance traditionnelle attend que le système de santé voie suffisamment de cas pour déclencher une alerte. Entre-temps, l'épidémie est déjà dans la communauté. Kinara OS est conçu pour corréler le signal sur les quatre domaines avant que le système de santé ait un cluster à signaler.
                 </p>
               </div>
-              <div className="space-y-0 border border-[#C3CEDA]">
+              <div className="space-y-0">
                 {WHY_IT_MATTERS.map((item, i) => (
-                  <div key={i} className="bg-white px-7 py-6 border-b border-[#C3CEDA] last:border-0">
+                  <div key={i} className="bg-[#F5F8FB] px-7 py-6 mb-2 last:mb-0">
                     <p className="text-[16px] font-[700] text-[#0F1B2D] mb-2">{item.heading}</p>
                     <p className="text-[14px] text-[#5D6E82] leading-relaxed">{item.body}</p>
                   </div>
@@ -96,7 +96,7 @@ export default function FrEarlyWarningPage() {
         </section>
 
         {/* ── Chaîne de signaux ─────────────────────────────────── */}
-        <section className="bg-[#F5F8FB] px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-[#F5F8FB] px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="mb-14">
               <p className="text-[11px] font-[700] uppercase tracking-[0.18em] text-[#E0561C] mb-4">Comment ça marche</p>
@@ -104,19 +104,19 @@ export default function FrEarlyWarningPage() {
                 Suivez un signal d'épidémie à travers quatre domaines.
               </h2>
             </div>
-            <div className="space-y-0 border border-[#C3CEDA]">
+            <div className="space-y-2">
               {SIGNAL_CHAIN.map((row, i) => (
                 <div
                   key={i}
-                  className="grid md:grid-cols-2 border-b border-[#C3CEDA] last:border-0"
+                  className="grid md:grid-cols-2"
                   style={{ borderLeftWidth: "3px", borderLeftStyle: "solid", borderLeftColor: row.color, background: i === 4 ? "rgba(224,86,28,0.03)" : "white" }}
                 >
-                  <div className="px-8 py-6 md:border-r border-[#C3CEDA]">
+                  <div className="px-8 py-6">
                     <p className="text-[11px] font-[700] uppercase tracking-[0.15em] mb-1" style={{ color: row.color }}>{row.domain}</p>
                     <p className="text-[12px] text-[#8A98A8] mb-3">{row.day} depuis le premier signal</p>
                     <p className={`text-[16px] font-[700] leading-snug ${i === 4 ? "text-[#E0561C]" : "text-[#0F1B2D]"}`}>{row.signal}</p>
                   </div>
-                  <div className="px-8 py-6">
+                  <div className="px-8 py-6 bg-[#F5F8FB]">
                     <p className="text-[14px] text-[#5D6E82] leading-relaxed">{row.detail}</p>
                   </div>
                 </div>
@@ -126,15 +126,15 @@ export default function FrEarlyWarningPage() {
         </section>
 
         {/* ── Applications ──────────────────────────────────────── */}
-        <section className="bg-white px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-white px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="mb-14">
               <p className="text-[11px] font-[700] uppercase tracking-[0.18em] text-[#E0561C] mb-4">Applications</p>
               <h2 className="text-[40px] md:text-[52px] font-[800] tracking-[-0.04em] text-[#0F1B2D] leading-[0.95] max-w-2xl">Ce que cela permet entre domaines.</h2>
             </div>
-            <div className="grid md:grid-cols-3 gap-px bg-[#C3CEDA]">
+            <div className="grid md:grid-cols-3 gap-6">
               {USE_CASES.map((uc) => (
-                <div key={uc.label} className="bg-white p-8">
+                <div key={uc.label} className="bg-[#F5F8FB] p-8">
                   <div className="w-8 h-1 mb-5 rounded-full" style={{ background: uc.color }} />
                   <p className="text-[17px] font-[800] text-[#0F1B2D] mb-3 tracking-[-0.02em]">{uc.label}</p>
                   <p className="text-[14px] text-[#5D6E82] leading-relaxed">{uc.desc}</p>
@@ -145,7 +145,7 @@ export default function FrEarlyWarningPage() {
         </section>
 
         {/* ── Gouvernance ───────────────────────────────────────── */}
-        <section className="bg-[#F5F8FB] px-8 py-24 border-b border-[#C3CEDA]">
+        <section className="bg-[#F5F8FB] px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div>
@@ -194,7 +194,9 @@ export default function FrEarlyWarningPage() {
                 <h2 className="text-[44px] md:text-[56px] font-[800] tracking-[-0.04em] text-white leading-[0.95] mb-6">
                   Nous exécuterons la requête interdomaine en direct.
                 </h2>
-                <p className="text-[17px] text-[#5D6E82] leading-relaxed">Un entretien de 45 minutes. Nous parcourons la chaîne de signaux, montrons la couche de gouvernance autorisant la jointure et affichons le journal d'audit en temps réel. Rien de mis en scène.</p>
+                <p className="text-[17px] text-[#5D6E82] leading-relaxed">
+                  L'infrastructure est déployée et disponible pour démonstration avec des données synthétiques. Un entretien de 45 minutes: nous parcourons la chaîne de signaux, montrons la couche de gouvernance autorisant la jointure et affichons le journal d'audit en temps réel.
+                </p>
               </div>
               <div className="flex flex-col gap-4 items-start">
                 <Link href="/fr/contact" className="inline-block bg-[#E0561C] text-white text-[15px] font-[700] px-9 py-4 hover:bg-[#c94d19] transition-colors">
@@ -203,6 +205,7 @@ export default function FrEarlyWarningPage() {
                 <Link href="/fr/governance" className="inline-block border border-[#3A4F68] text-[#8A98A8] text-[15px] font-[600] px-9 py-4 hover:border-[#8A98A8] hover:text-white transition-colors">
                   Découvrir le modèle de gouvernance
                 </Link>
+                <p className="text-[13px] text-[#3A4F68] mt-2">Kinara OS est conçu et détenu par Klinova &nbsp;&middot;&nbsp; kinaraos.com</p>
               </div>
             </div>
           </div>

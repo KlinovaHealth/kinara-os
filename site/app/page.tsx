@@ -191,10 +191,10 @@ export default function Home() {
             {/* Trust strip */}
             <div className="flex flex-wrap items-center gap-y-2 border-t border-[#1A2A40] pt-6 mb-0 pb-10">
               {[
-                "152 services in production",
+                "152 deployed services",
                 "4 governed domains",
                 "144 isolated databases, one per service",
-                "1 live tenant",
+                "2 deployed tenants",
               ].map((item, i) => (
                 <span key={i} className="text-[13px] text-[#5D6E82] flex items-center">
                   {i > 0 && <span className="mx-4 text-[#1A2A40]">&middot;</span>}
@@ -270,7 +270,7 @@ export default function Home() {
               </h2>
             </div>
 
-            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-px bg-[#C3CEDA]">
+            <div className="grid sm:grid-cols-2 md:grid-cols-4">
               {STORIES.map((s, i) => (
                 <div
                   key={i}
@@ -376,7 +376,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             THE GOVERNANCE LAYER  — light plane, two-column
         ═══════════════════════════════════════════════════════════ */}
-        <section className="bg-[#F5F8FB] px-8 py-24 border-y border-[#C3CEDA]">
+        <section className="bg-[#F5F8FB] px-8 py-24">
           <div className="max-w-[1440px] mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-start reveal">
               {/* Left: domain card */}
@@ -438,7 +438,7 @@ export default function Home() {
         ═══════════════════════════════════════════════════════════ */}
         <section className="bg-white px-8 py-24">
           <div className="max-w-[1440px] mx-auto reveal">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#C3CEDA] border border-[#C3CEDA]">
+            <div className="grid grid-cols-2 md:grid-cols-4">
               {[
                 { n: "152", l: "services", sub: "in production" },
                 { n: "144", l: "isolated databases", sub: "one per service" },
@@ -535,10 +535,10 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-16 items-center reveal">
               <div>
                 <p className="text-[11px] font-[700] uppercase tracking-[0.18em] text-[#E0561C] mb-6">
-                  In production
+                  The platform
                 </p>
                 <h2 className="text-[44px] md:text-[56px] font-[800] tracking-[-0.04em] text-[#0F1B2D] leading-[0.95] mb-8">
-                  Two tenants. One live system.
+                  Two deployed tenants. One production-ready system.
                 </h2>
 
                 {/* Klinova — for-profit */}
@@ -557,7 +557,7 @@ export default function Home() {
                     Village Health Access &nbsp;&middot;&nbsp; Non-profit operator
                   </p>
                   <p className="text-[16px] text-[#5D6E82] leading-relaxed">
-                    A live community clinic network. Real patients. Real records. Stock entered via WhatsApp by named field workers. Reports drawn directly from the operational database. No manual export, no spreadsheet.
+                    Synthetic data. Real workflows. Production-ready infrastructure. The first real-world community health pilot begins in Togo, March 2027.
                   </p>
                 </div>
 
@@ -572,7 +572,7 @@ export default function Home() {
               {/* Audit card visual */}
               <div className="bg-[#F5F8FB] border border-[#C3CEDA] p-8">
                 <p className="text-[11px] font-[700] uppercase tracking-[0.14em] text-[#8A98A8] mb-6">
-                  Audit log · Village Health Access
+                  Audit log · Klinova
                 </p>
                 <div className="space-y-3">
                   {[
