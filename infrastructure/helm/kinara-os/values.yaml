@@ -4,6 +4,7 @@ global:
   imagePullPolicy: Always
   namespace: kinara-production
   jwtPublicKeyPath: /etc/jwt/public.pem
+  tenantScopeMode: report
   imagePullSecrets:
     - name: registry-kinara-registry
 

@@ -96,6 +96,8 @@ spec:
               value: /etc/kinara/tls/tls.key
             - name: TLS_CA_FILE
               value: /etc/kinara/tls/ca.crt
+            - name: TENANT_SCOPE_MODE
+              value: {{ $.Values.global.tenantScopeMode | default "report" }}
             # JWT env var aliases — some services use JWT_PUBLIC_KEY, others JWT_PUBLIC_KEY_PATH
             - name: JWT_PUBLIC_KEY
               value: /etc/jwt/public.pem
