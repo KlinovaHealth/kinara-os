@@ -17,6 +17,7 @@ import (
 	"github.com/klinova/kinara-os/health-worker-service/db"
 	"github.com/klinova/kinara-os/health-worker-service/handlers"
 	"github.com/klinova/kinara-os/health-worker-service/middleware"
+	pkgevents "github.com/klinova/kinara-os/pkg/events"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
@@ -124,9 +125,21 @@ func main() {
 
 	r.Handle("/metrics", promhttp.Handler())
 
+	var pub *pkgevents.Publisher
+	if eventsURL := os.Getenv("EVENTS_DB_URL"); eventsURL != "" {
+		eventsPool, err := pgxpool.New(context.Background(), eventsURL)
+		if err != nil {
+			logger.Error("failed to connect to events database", "error", err)
+			os.Exit(1)
+		}
+		defer eventsPool.Close()
+		pub = pkgevents.NewPublisher(eventsPool, "health-worker-service")
+		logger.Info("event bus publisher initialized")
+	}
+
 	queries := db.New(pool)
 	jwtMiddleware := middleware.JWT(validator)
-	h := handlers.New(queries, enc, logger)
+	h := handlers.New(queries, enc, logger, pub)
 	h.Register(r, jwtMiddleware)
 
 	port := os.Getenv("PORT")

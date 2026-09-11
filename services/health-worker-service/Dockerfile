@@ -8,6 +8,7 @@ RUN apk --no-cache add git
 
 COPY services/health-worker-service/go.mod ./
 COPY pkg/auth /pkg/auth
+COPY pkg/events /pkg/events
 RUN go mod download
 
 COPY services/health-worker-service/. .

@@ -12,18 +12,20 @@ import (
 	"github.com/klinova/kinara-os/health-worker-service/auth"
 	"github.com/klinova/kinara-os/health-worker-service/crypto"
 	"github.com/klinova/kinara-os/health-worker-service/db"
-	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/klinova/kinara-os/health-worker-service/middleware"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
+	pkgevents "github.com/klinova/kinara-os/pkg/events"
 )
 
 type Handler struct {
 	queries *db.Queries
 	enc     *crypto.Encryptor
 	logger  *slog.Logger
+	pub     *pkgevents.Publisher
 }
 
-func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
-	return &Handler{queries: q, enc: enc, logger: logger}
+func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger, pub *pkgevents.Publisher) *Handler {
+	return &Handler{queries: q, enc: enc, logger: logger, pub: pub}
 }
 
 func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler) {
@@ -78,6 +80,14 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		h.internalError(w, err)
 		return
 	}
+
+	if h.pub != nil {
+		evtPayload, _ := json.Marshal(map[string]string{"record_id": rec.ID.String()})
+		if _, err := h.pub.Publish(r.Context(), "health-worker.record.created", evtPayload); err != nil {
+			h.logger.Error("event publish failed", "error", err, "record_id", rec.ID)
+		}
+	}
+
 	h.json(w, http.StatusCreated, map[string]string{"id": rec.ID.String()})
 }
 

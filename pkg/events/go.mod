@@ -3,7 +3,7 @@ module github.com/klinova/kinara-os/pkg/events
 go 1.25.0
 
 require (
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.0
 	github.com/klinova/kinara-os/pkg/auth v0.0.0
 )
@@ -20,7 +20,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )

@@ -98,6 +98,8 @@ spec:
               value: /etc/kinara/tls/ca.crt
             - name: TENANT_SCOPE_MODE
               value: {{ $.Values.global.tenantScopeMode | default "report" }}
+            - name: EVENTS_DB_URL
+              value: "postgresql://$(_DB_USER):$(_DB_PASS)@$(_DB_HOST):$(_DB_PORT)/kinara_events?sslmode=require&pool_max_conns=2&pool_min_conns=0&pool_max_conn_idle_time=10s"
             # JWT env var aliases — some services use JWT_PUBLIC_KEY, others JWT_PUBLIC_KEY_PATH
             - name: JWT_PUBLIC_KEY
               value: /etc/jwt/public.pem
