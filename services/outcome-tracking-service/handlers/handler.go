@@ -17,12 +17,12 @@ import (
 )
 
 type Handler struct {
-	queries *db.Queries
+	queries db.Querier
 	enc     *crypto.Encryptor
 	logger  *slog.Logger
 }
 
-func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
+func New(q db.Querier, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 	return &Handler{queries: q, enc: enc, logger: logger}
 }
 
@@ -38,11 +38,12 @@ func (h *Handler) Register(r *mux.Router, jwtMW func(http.Handler) http.Handler)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
 		page = 1
 	}
-	items, err := h.queries.List(r.Context(), 20, (page-1)*20)
+	items, err := h.queries.List(r.Context(), 20, (page-1)*20, claims.TenantID)
 	if err != nil {
 		h.internalError(w, err)
 		return
@@ -71,6 +72,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		ID:        uuid.New(),
 		DataEnc:   encrypted,
 		CreatedBy: claims.UserID,
+		TenantID:  claims.TenantID,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -82,6 +84,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFromContext(r.Context())
 	id, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		h.badRequest(w, "invalid id")
@@ -89,6 +92,11 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	rec, err := h.queries.Get(r.Context(), id)
 	if err != nil {
+		h.notFound(w)
+		return
+	}
+	// Return 404 (not 403) — avoids leaking that the record exists to another tenant.
+	if rec.TenantID != claims.TenantID {
 		h.notFound(w)
 		return
 	}
@@ -119,7 +127,8 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		h.badRequest(w, "invalid id")
 		return
 	}
-	if err := h.queries.Delete(r.Context(), id); err != nil {
+	claims := middleware.ClaimsFromContext(r.Context())
+	if err := h.queries.Delete(r.Context(), id, claims.TenantID); err != nil {
 		h.internalError(w, err)
 		return
 	}

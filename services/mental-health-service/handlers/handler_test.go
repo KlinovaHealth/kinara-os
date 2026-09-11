@@ -52,26 +52,32 @@ func (m *mockQuerier) Get(_ context.Context, id uuid.UUID) (*db.Record, error) {
 	return nil, fmt.Errorf("not found")
 }
 
-func (m *mockQuerier) List(_ context.Context, limit, offset int) ([]db.Record, error) {
+func (m *mockQuerier) List(_ context.Context, limit, offset int, tenantID uuid.UUID) ([]db.Record, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	end := offset + limit
-	if end > len(m.records) {
-		end = len(m.records)
+	var filtered []db.Record
+	for _, r := range m.records {
+		if r.TenantID == tenantID {
+			filtered = append(filtered, r)
+		}
 	}
-	if offset >= len(m.records) {
+	end := offset + limit
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+	if offset >= len(filtered) {
 		return nil, nil
 	}
 	cp := make([]db.Record, end-offset)
-	copy(cp, m.records[offset:end])
+	copy(cp, filtered[offset:end])
 	return cp, nil
 }
 
-func (m *mockQuerier) Delete(_ context.Context, id uuid.UUID) error {
+func (m *mockQuerier) Delete(_ context.Context, id, tenantID uuid.UUID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for i, r := range m.records {
-		if r.ID == id {
+		if r.ID == id && r.TenantID == tenantID {
 			m.records = append(m.records[:i], m.records[i+1:]...)
 			return nil
 		}
@@ -114,7 +120,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func mintToken(t *testing.T, entityType string) string {
+func mintToken(t *testing.T, entityType string, tenantID uuid.UUID) string {
 	t.Helper()
 	claims := &localauth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -124,7 +130,7 @@ func mintToken(t *testing.T, entityType string) string {
 		UserID:     uuid.New(),
 		Role:       "worker",
 		EntityType: entityType,
-		TenantID:   uuid.New(),
+		TenantID:   tenantID,
 	}
 	tok, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(testPrivKey)
 	if err != nil {
@@ -192,7 +198,7 @@ func TestEmptyEntityType_Returns403(t *testing.T) {
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
-	tok := mintToken(t, "") // empty entity_type triggers RequireTenantScope violation
+	tok := mintToken(t, "", uuid.New()) // empty entity_type triggers RequireTenantScope violation
 	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/mental-healths", bytes.NewBufferString(`{}`))
 	req.Header.Set("Authorization", "Bearer "+tok)
 	req.Header.Set("Content-Type", "application/json")
@@ -212,9 +218,10 @@ func TestCreate_StoresCiphertext(t *testing.T) {
 	srv := newTestServer(t, store)
 	defer srv.Close()
 
+	tenantID := uuid.New()
 	body := `{"name":"patient-alpha","note":"confidential"}`
 	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/api/v1/mental-healths", bytes.NewBufferString(body))
-	req.Header.Set("Authorization", "Bearer "+mintToken(t, "klinova"))
+	req.Header.Set("Authorization", "Bearer "+mintToken(t, "klinova", tenantID))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -247,6 +254,88 @@ func TestCreate_StoresCiphertext(t *testing.T) {
 	}
 	if recs[0].DataEnc == "" {
 		t.Error("DataEnc must not be empty")
+	}
+	if recs[0].TenantID != tenantID {
+		t.Errorf("stored TenantID %v does not match token TenantID %v", recs[0].TenantID, tenantID)
+	}
+}
+
+// TestCrossTenantList verifies that list returns only the requesting tenant's own records.
+func TestCrossTenantList(t *testing.T) {
+	store := &mockQuerier{}
+	tenantA := uuid.New()
+	tenantB := uuid.New()
+	idA := uuid.New()
+	idB := uuid.New()
+
+	store.mu.Lock()
+	store.records = []db.Record{
+		{ID: idA, DataEnc: "enc-A", TenantID: tenantA, CreatedBy: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: idB, DataEnc: "enc-B", TenantID: tenantB, CreatedBy: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	}
+	store.mu.Unlock()
+
+	srv := newTestServer(t, store)
+	defer srv.Close()
+
+	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/mental-healths", nil)
+	req.Header.Set("Authorization", "Bearer "+mintToken(t, "klinova", tenantA))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("want 200, got %d", resp.StatusCode)
+	}
+
+	var body struct {
+		Items []struct {
+			ID string `json:"id"`
+		} `json:"items"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(body.Items) != 1 {
+		t.Errorf("tenantA should see 1 record, got %d", len(body.Items))
+	}
+	for _, item := range body.Items {
+		if item.ID == idB.String() {
+			t.Error("tenantA's list response must not contain tenantB's record")
+		}
+	}
+}
+
+// TestCrossTenantGet verifies cross-tenant get-by-id returns 404 (not 403) to avoid existence leak.
+func TestCrossTenantGet(t *testing.T) {
+	store := &mockQuerier{}
+	tenantA := uuid.New()
+	tenantB := uuid.New()
+	idB := uuid.New()
+
+	store.mu.Lock()
+	store.records = []db.Record{
+		{ID: idB, DataEnc: "enc-B", TenantID: tenantB, CreatedBy: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	}
+	store.mu.Unlock()
+
+	srv := newTestServer(t, store)
+	defer srv.Close()
+
+	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/mental-healths/"+idB.String(), nil)
+	req.Header.Set("Authorization", "Bearer "+mintToken(t, "klinova", tenantA))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	t.Logf("cross-tenant GET returns: %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("cross-tenant GET should return 404 (not %d) to avoid existence leak", resp.StatusCode)
 	}
 }
 
