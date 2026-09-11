@@ -2,6 +2,7 @@ go 1.21
 
 use (
 	./pkg/auth
+	./pkg/events
 	./services/agri-certification-service
 	./services/agri-credit-service
 	./services/agri-equipment-service
