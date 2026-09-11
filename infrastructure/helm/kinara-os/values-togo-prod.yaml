@@ -1,5 +1,5 @@
 global:
-  imageRegistry: registry.digitalocean.com/kinara
+  imageRegistry: registry.digitalocean.com/kinara-registry
   imagePullPolicy: Always
   namespace: kinara-togo
 
