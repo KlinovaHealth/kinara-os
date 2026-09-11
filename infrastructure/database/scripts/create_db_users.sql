@@ -20,6 +20,7 @@ $$;
 
 GRANT CONNECT ON DATABASE kinara_auth         TO app_user;
 GRANT CONNECT ON DATABASE kinara_audit        TO app_user;
+GRANT CONNECT ON DATABASE kinara_events       TO app_user;
 GRANT CONNECT ON DATABASE kinara_notification TO app_user;
 GRANT CONNECT ON DATABASE kinara_patient      TO app_user;
 GRANT CONNECT ON DATABASE kinara_farmer       TO app_user;
