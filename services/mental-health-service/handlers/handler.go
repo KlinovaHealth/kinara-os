@@ -17,12 +17,12 @@ import (
 )
 
 type Handler struct {
-	queries *db.Queries
+	queries db.Querier
 	enc     *crypto.Encryptor
 	logger  *slog.Logger
 }
 
-func New(q *db.Queries, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
+func New(q db.Querier, enc *crypto.Encryptor, logger *slog.Logger) *Handler {
 	return &Handler{queries: q, enc: enc, logger: logger}
 }
 

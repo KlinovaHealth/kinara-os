@@ -317,10 +317,10 @@ func TestCalculateETA_100km(t *testing.T) {
 }
 
 func TestHaversine_Accuracy(t *testing.T) {
-	// Lomé (6.1375, 1.2123) to Accra (5.5560, -0.1969) ≈ 118-130 km.
+	// Lomé (6.1375, 1.2123) to Accra (5.5560, -0.1969) — great-circle ≈ 168 km.
 	dist := haversineKm(6.1375, 1.2123, 5.5560, -0.1969)
-	if dist < 118 || dist > 130 {
-		t.Errorf("expected Lomé-Accra distance 118-130 km, got %.2f km", dist)
+	if dist < 160 || dist > 175 {
+		t.Errorf("expected Lomé-Accra distance 160-175 km, got %.2f km", dist)
 	}
 }
 

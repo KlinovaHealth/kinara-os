@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type Querier interface {
+	Create(ctx context.Context, r Record) error
+	Get(ctx context.Context, id uuid.UUID) (*Record, error)
+	List(ctx context.Context, limit, offset int) ([]Record, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
 type Queries struct {
 	pool *pgxpool.Pool
 }
