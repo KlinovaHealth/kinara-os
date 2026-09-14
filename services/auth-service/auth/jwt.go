@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 	"github.com/google/uuid"
 )
 
@@ -19,18 +20,7 @@ const (
 // Claims is the JWT payload used across Kinara Governance OS.
 // EntityType and TenantID are set server-side at login from the user's DB record
 // and cannot be supplied or overridden by the client.
-type Claims struct {
-	jwt.RegisteredClaims
-	UserID     uuid.UUID  `json:"uid"`
-	Username   string     `json:"username"`
-	Role       string     `json:"role"`
-	Scopes     []string   `json:"scopes"`
-	EntityType string     `json:"entity_type"`          // "klinova" | "vha"
-	TenantID   uuid.UUID  `json:"tenant_id"`             // UUID of the owning tenant row
-	DeviceID   *uuid.UUID `json:"device_id,omitempty"`
-	ClinicID   *uuid.UUID `json:"clinic_id,omitempty"`
-	Scope      string     `json:"scope,omitempty"`       // "clinic:<uuid>" for device sessions
-}
+type Claims = pkgauth.Claims
 
 // Issuer signs access tokens with an RSA private key (RS256).
 // Other services validate using the corresponding public key.
@@ -104,24 +94,6 @@ func (i *Issuer) Validate(tokenString string) (*Claims, error) {
 		return nil, errors.New("invalid token claims")
 	}
 	return claims, nil
-}
-
-func (c *Claims) IsAllowedRole(roles ...string) bool {
-	for _, r := range roles {
-		if c.Role == r {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *Claims) HasScope(scope string) bool {
-	for _, s := range c.Scopes {
-		if s == scope {
-			return true
-		}
-	}
-	return false
 }
 
 // IssueDeviceAccessToken signs a short-lived JWT (5 min) scoped to a single clinic.

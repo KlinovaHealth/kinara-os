@@ -113,6 +113,10 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	// NOTE: unimplemented stub — returns 200 without persisting anything or checking
+	// ownership. When implementing, fetch the record and apply the same tenant guard
+	// the get handler uses (if rec.TenantID != claims.TenantID -> h.notFound(w)),
+	// otherwise this endpoint becomes a cross-tenant write.
 	_, err := uuid.Parse(mux.Vars(r)["id"])
 	if err != nil {
 		h.badRequest(w, "invalid id")

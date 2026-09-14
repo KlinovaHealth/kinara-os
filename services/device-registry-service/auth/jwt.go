@@ -6,17 +6,10 @@ import (
 	"os"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 )
 
-type Claims struct {
-	jwt.RegisteredClaims
-	UserID     uuid.UUID `json:"user_id"`
-	Role       string    `json:"role"`
-	Scopes     []string  `json:"scopes"`
-	EntityType string    `json:"entity_type"` // "klinova" | "vha"
-	TenantID   uuid.UUID `json:"tenant_id"`
-}
+type Claims = pkgauth.Claims
 
 type Validator struct {
 	publicKey *rsa.PublicKey
@@ -54,15 +47,6 @@ func (v *Validator) Validate(tokenString string) (*Claims, error) {
 func (v *Validator) IsAllowedRole(claims *Claims, allowed ...string) bool {
 	for _, r := range allowed {
 		if claims.Role == r {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *Claims) IsAllowedRole(allowed ...string) bool {
-	for _, r := range allowed {
-		if c.Role == r {
 			return true
 		}
 	}

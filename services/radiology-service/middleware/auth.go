@@ -27,13 +27,7 @@ func JWT(v *auth.Validator) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), claimsKey, claims)
-			ctx = pkgauth.InjectClaims(ctx, &pkgauth.Claims{
-				UserID:     claims.UserID,
-				Role:       claims.Role,
-				Scopes:     claims.Scopes,
-				EntityType: claims.EntityType,
-				TenantID:   claims.TenantID,
-			})
+			ctx = pkgauth.InjectClaims(ctx, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

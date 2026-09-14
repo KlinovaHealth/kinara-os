@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
+	pkgauth "github.com/klinova/kinara-os/pkg/auth"
 )
 
 var (
@@ -20,14 +20,7 @@ var (
 )
 
 // Claims is the payload embedded in every Kinara OS JWT.
-type Claims struct {
-	UserID     uuid.UUID `json:"user_id"`
-	Role       string    `json:"role"`
-	Scopes     []string  `json:"scopes"`
-	EntityType string    `json:"entity_type"` // "klinova" | "vha"
-	TenantID   uuid.UUID `json:"tenant_id"`
-	jwt.RegisteredClaims
-}
+type Claims = pkgauth.Claims
 
 // Validator holds the RSA public key used to verify JWT signatures.
 type Validator struct {
@@ -72,21 +65,4 @@ func (v *Validator) Validate(tokenString string) (*Claims, error) {
 }
 
 // HasScope returns true if the claims include the specified scope.
-func (c *Claims) HasScope(scope string) bool {
-	for _, s := range c.Scopes {
-		if s == scope {
-			return true
-		}
-	}
-	return false
-}
-
 // IsAllowedRole returns true if the caller's role is in the allowed set.
-func (c *Claims) IsAllowedRole(roles ...string) bool {
-	for _, r := range roles {
-		if c.Role == r {
-			return true
-		}
-	}
-	return false
-}

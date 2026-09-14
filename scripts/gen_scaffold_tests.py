@@ -257,6 +257,33 @@ def apply_handler_fix(path):
     return True
 
 
+UPDATE_NOTE = (
+    "\t// NOTE: unimplemented stub — returns 200 without persisting anything or checking\n"
+    "\t// ownership. When implementing, fetch the record and apply the same tenant guard\n"
+    "\t// the get handler uses (if rec.TenantID != claims.TenantID -> h.notFound(w)),\n"
+    "\t// otherwise this endpoint becomes a cross-tenant write.\n"
+)
+
+
+def apply_update_note(path):
+    """Insert the stub note as the first line of the update handler body. Idempotent.
+
+    Runs independently of apply_handler_fix, which early-returns on already-fixed
+    services and would otherwise never reach the note insertion.
+    """
+    with open(path) as f:
+        src = f.read()
+    if "unimplemented stub" in src:
+        return False
+    anchor = "func (h *Handler) update(w http.ResponseWriter, r *http.Request) {\n"
+    if anchor not in src:
+        return False
+    src = src.replace(anchor, anchor + UPDATE_NOTE, 1)
+    with open(path, "w") as f:
+        f.write(src)
+    return True
+
+
 def get_resource_path(handler_path):
     with open(handler_path) as f:
         content = f.read()
@@ -266,6 +293,12 @@ def get_resource_path(handler_path):
 
 def read_template():
     tpl_path = os.path.join(SERVICES, TEMPLATE_SVC, "handlers", "handler_test.go")
+    with open(tpl_path) as f:
+        return f.read()
+
+
+def read_isolation_template():
+    tpl_path = os.path.join(SERVICES, TEMPLATE_SVC, "handlers", "isolation_test.go")
     with open(tpl_path) as f:
         return f.read()
 
@@ -280,9 +313,12 @@ def generate_test(svc, resource_path, template):
 
 def main():
     template = read_template()
+    isolation_template = read_isolation_template()
     updated_db = 0
     updated_handler = 0
+    updated_note = 0
     generated_tests = 0
+    generated_isolation = 0
     skipped = []
 
     for svc in sorted(os.listdir(SERVICES)):
@@ -312,14 +348,25 @@ def main():
         if apply_handler_fix(handler_path):
             updated_handler += 1
 
+        if apply_update_note(handler_path):
+            updated_note += 1
+
         test_content = generate_test(svc, resource_path, template)
         with open(test_path, "w") as f:
             f.write(test_content)
         generated_tests += 1
 
-    print(f"db.go updated:          {updated_db}")
-    print(f"handler.go updated:     {updated_handler}")
-    print(f"handler_test.go written:{generated_tests}")
+        isolation_path = os.path.join(svc_dir, "handlers", "isolation_test.go")
+        isolation_content = generate_test(svc, resource_path, isolation_template)
+        with open(isolation_path, "w") as f:
+            f.write(isolation_content)
+        generated_isolation += 1
+
+    print(f"db.go updated:            {updated_db}")
+    print(f"handler.go updated:       {updated_handler}")
+    print(f"update-note inserted:     {updated_note}")
+    print(f"handler_test.go written:  {generated_tests}")
+    print(f"isolation_test.go written:{generated_isolation}")
     if skipped:
         print(f"skipped: {skipped}")
     total = generated_tests + 1  # +1 for mental-health-service
